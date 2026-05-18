@@ -5,8 +5,6 @@ sidecar/.venv/
 __pycache__/
 *.pyc
 
-# Vite dev
-public/icons
 
 # Debug/temp images
 fixtures/debug-*
