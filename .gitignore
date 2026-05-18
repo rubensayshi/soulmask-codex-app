@@ -9,7 +9,6 @@ __pycache__/
 # Debug/temp images
 fixtures/debug-*
 screenshots/
-debug/
 
 # Build artifacts
 src-tauri/target/
