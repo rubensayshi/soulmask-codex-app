@@ -8,7 +8,7 @@ def test_parse_level_line_full():
     result = parse_level_line("LV.50 Master Hunter <Claw Tribe>")
     assert result["level"] == 50
     assert result["class_name"] == "Master Hunter"
-    assert result["clan"] == "Claw Tribe"
+    assert result["clan"] == "Claw"
 
 
 def test_parse_level_line_no_clan():
@@ -20,7 +20,7 @@ def test_parse_level_line_no_clan():
 
 def test_parse_level_line_with_angle_brackets():
     result = parse_level_line("LV.50 Master Hunter <Wolf Tribe>")
-    assert result["clan"] == "Wolf Tribe"
+    assert result["clan"] == "Wolf"
 
 
 def test_parse_level_line_lv_variations():

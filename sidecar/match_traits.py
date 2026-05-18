@@ -12,7 +12,7 @@ class TraitMatch:
     bbox: tuple[int, int, int, int]  # x, y, w, h within the icon row
 
 
-CONFIDENCE_THRESHOLD = 0.65
+CONFIDENCE_THRESHOLD = 0.62
 
 
 def load_atlas(atlas_dir: str, size: int | None = None) -> dict[str, np.ndarray]:
@@ -30,42 +30,81 @@ def load_atlas(atlas_dir: str, size: int | None = None) -> dict[str, np.ndarray]
     return atlas
 
 
-def segment_icons(trait_row: np.ndarray, expected_size: int = 32) -> list[tuple[np.ndarray, int, int]]:
+def segment_icons(trait_row: np.ndarray, expected_size: int = 64) -> list[tuple[np.ndarray, int, int]]:
     """Segment individual icons from the trait icon row.
-    Returns list of (icon_image, x_offset, y_offset)."""
+
+    Uses multiple binary thresholds to handle varying background brightness
+    (game world bleeds through semi-transparent card UI), then deduplicates
+    overlapping detections via NMS-style merging.
+    """
     gray = cv2.cvtColor(trait_row, cv2.COLOR_BGR2GRAY) if len(trait_row.shape) == 3 else trait_row
-    _, binary = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
+    h, w = gray.shape
+    min_side = max(int(expected_size * 0.5), 20)
+    max_side = int(expected_size * 2.0)
 
-    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    candidates: list[tuple[int, int, int]] = []
+    for thresh in range(20, 120, 10):
+        _, binary = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for cnt in contours:
+            bx, by, bw, bh = cv2.boundingRect(cnt)
+            if bw < min_side or bh < min_side or bw > max_side or bh > max_side:
+                continue
+            aspect = max(bw, bh) / min(bw, bh) if min(bw, bh) > 0 else 99
+            if aspect > 1.8:
+                continue
+            side = max(bw, bh)
+            cx, cy = bx + bw // 2, by + bh // 2
+            candidates.append((cx, cy, side))
 
-    icons = []
-    min_size = expected_size * 0.5
-    max_size = expected_size * 2.5
+    if not candidates:
+        return []
 
-    for cnt in contours:
-        x, y, w, h = cv2.boundingRect(cnt)
-        if w < min_size or h < min_size or w > max_size or h > max_size:
+    candidates.sort(key=lambda c: c[0])
+    merged: list[tuple[int, int, int]] = []
+    used = [False] * len(candidates)
+    for i, (cx, cy, side) in enumerate(candidates):
+        if used[i]:
             continue
-        aspect = max(w, h) / min(w, h) if min(w, h) > 0 else 99
-        if aspect > 1.8:
-            continue
-        side = max(w, h)
-        cx, cy = x + w // 2, y + h // 2
+        group_cx, group_cy, group_side = [cx], [cy], [side]
+        used[i] = True
+        for j in range(i + 1, len(candidates)):
+            if used[j]:
+                continue
+            cx2, cy2, side2 = candidates[j]
+            if abs(cx2 - cx) < side * 0.4 and abs(cy2 - cy) < side * 0.4:
+                group_cx.append(cx2)
+                group_cy.append(cy2)
+                group_side.append(side2)
+                used[j] = True
+        merged.append((
+            int(np.mean(group_cx)),
+            int(np.mean(group_cy)),
+            int(np.median(group_side)),
+        ))
+
+    if len(merged) >= 3:
+        sides = sorted([s for _, _, s in merged])
+        median_side = sides[len(sides) // 2]
+        lo, hi = median_side * 0.5, median_side * 1.6
+        merged = [(cx, cy, s) for cx, cy, s in merged if lo <= s <= hi]
+
+    icons: list[tuple[np.ndarray, int, int]] = []
+    for cx, cy, side in merged:
         x1 = max(0, cx - side // 2)
         y1 = max(0, cy - side // 2)
-        x2 = min(trait_row.shape[1], x1 + side)
-        y2 = min(trait_row.shape[0], y1 + side)
-        icon_crop = trait_row[y1:y2, x1:x2]
-        if icon_crop.size == 0:
-            continue
-        icons.append((icon_crop, x1, y1))
+        x2 = min(w, x1 + side)
+        y2 = min(h, y1 + side)
+        crop = trait_row[y1:y2, x1:x2]
+        if crop.size > 0:
+            icons.append((crop, x1, y1))
 
     icons.sort(key=lambda t: t[1])
     return icons
 
 
 def match_icon(icon_img: np.ndarray, atlas: dict[str, np.ndarray]) -> TraitMatch:
-    """Match a single icon against the atlas. Returns best match."""
+    """Match a single icon against the atlas using cross-correlation."""
     best_name = ""
     best_score = -1.0
 
@@ -74,7 +113,7 @@ def match_icon(icon_img: np.ndarray, atlas: dict[str, np.ndarray]) -> TraitMatch
         icon_img = cv2.resize(icon_img, (target_size, target_size))
 
     for name, ref in atlas.items():
-        result = cv2.matchTemplate(icon_img, ref, cv2.TM_CCOEFF_NORMED)
+        result = cv2.matchTemplate(icon_img, ref, cv2.TM_CCORR_NORMED)
         score = float(result[0][0])
         if score > best_score:
             best_score = score
@@ -84,7 +123,7 @@ def match_icon(icon_img: np.ndarray, atlas: dict[str, np.ndarray]) -> TraitMatch
 
 
 def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
-                    expected_icon_size: int = 32) -> list[TraitMatch]:
+                    expected_icon_size: int = 64) -> list[TraitMatch]:
     """Extract and match all icons in a trait row image."""
     icons = segment_icons(trait_row, expected_size=expected_icon_size)
 

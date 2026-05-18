@@ -45,7 +45,23 @@ def process_image(image_path: str, atlas_dir: str) -> dict:
                 "traits": [],
             })
 
+    tribesmen = [t for t in tribesmen if _is_valid_tribesman(t)]
     return {"tribesmen": tribesmen, "cards_found": len(cards)}
+
+
+def _is_valid_tribesman(t: dict) -> bool:
+    """Reject OCR garbage from partially visible or corrupt cards."""
+    name = t.get("name") or ""
+    if name.startswith("[Card"):
+        return False
+    clean_name = name.replace("_", "").replace("-", "").strip()
+    if len(clean_name) < 3:
+        return False
+    has_level = t.get("level") is not None
+    has_class = bool(t.get("class"))
+    has_traits = len(t.get("traits", [])) >= 2
+    score = int(has_level) + int(has_class) + int(has_traits)
+    return score >= 2
 
 
 def process_images(image_paths: list[str], atlas_dir: str) -> dict:
