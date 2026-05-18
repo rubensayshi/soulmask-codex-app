@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.venv/
+sidecar/.venv/
+__pycache__/
+*.pyc
+
+# Vite dev
+public/icons
+
+# Debug/temp images
+fixtures/debug-*
+screenshots/
+
+# Build artifacts
+src-tauri/target/
+src-tauri/gen/
