@@ -59,6 +59,11 @@ const TRAIT_DEFS: Record<string, { name: string; shape: BadgeShape; eff: string;
   farming_expert: { name: 'Farming Expert',   shape: 'shield',  eff: 'Crop yield +30%',               icon: 'ChengHao_zhongtiannengshou' },
 }
 
+export const TRAIT_BY_ICON: Record<string, { id: string; name: string; shape: BadgeShape; eff: string }> = {}
+for (const [id, def] of Object.entries(TRAIT_DEFS)) {
+  TRAIT_BY_ICON[def.icon] = { id, name: def.name, shape: def.shape, eff: def.eff }
+}
+
 const TRAIT_IDS = Object.keys(TRAIT_DEFS)
 const CLASSES = ['Skilled Laborer', 'Veteran Hunter', 'Master Hunter', 'Master Forager', 'Master Builder', 'War Chief']
 const TITLES = ['Weapon Master', 'Nightwalker', 'Farming Expert', 'Forge Hand', 'Pathfinder', 'Hearthkeeper', 'Stonebreaker', '—']
