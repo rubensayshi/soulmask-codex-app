@@ -1,14 +1,12 @@
 import { useState, useMemo, useCallback } from 'react'
-import type { SlotState, TraitMatch } from '../lib/types'
+import type { SlotState, TraitMatch, Tribesman } from '../lib/types'
 import { buildSlots, buildSlotsFromDesired, buildTraitPool, type PlannerMode } from '../lib/planner'
-import { MOCK_ROSTER } from '../lib/data'
 import { TraineePanel } from '../components/TraineePanel'
 import { TraitPicker } from '../components/TraitPicker'
 import { MentorPanel } from '../components/MentorPanel'
 import { TraineeRankPanel } from '../components/TraineeRankPanel'
 
-export function TrainingPlanner() {
-  const roster = MOCK_ROSTER
+export function TrainingPlanner({ roster }: { roster: Tribesman[] }) {
 
   const [mode, setMode] = useState<PlannerMode>('trainee-first')
   const [traineeId, setTraineeId] = useState<string | null>(null)

@@ -1,24 +1,25 @@
 import { useMemo } from 'react'
-import { CLANS, GROUPS, MOCK_ROSTER, PROF_SKILLS, ENABLE_PROFICIENCIES } from '../lib/data'
-import type { Filters, ClanName } from '../lib/types'
+import { CLANS, GROUPS, PROF_SKILLS, ENABLE_PROFICIENCIES } from '../lib/data'
+import type { Filters, ClanName, Tribesman } from '../lib/types'
 
 const CLAN_LIST: ClanName[] = ['Claw', 'Flint', 'Fang', 'Wolf', 'Horn', 'Exile', 'DLC']
 
 interface Props {
   filters: Filters
   setFilters: (f: Filters) => void
+  roster: Tribesman[]
 }
 
-export function FilterBar({ filters, setFilters }: Props) {
+export function FilterBar({ filters, setFilters, roster }: Props) {
   const allTraitNames = useMemo(() => {
     const seen = new Map<string, string>()
-    for (const tm of MOCK_ROSTER) {
+    for (const tm of roster) {
       for (const t of tm.traits) {
         if (!seen.has(t.id)) seen.set(t.id, t.name)
       }
     }
     return Array.from(seen.entries()).sort((a, b) => a[1].localeCompare(b[1]))
-  }, [])
+  }, [roster])
 
   function toggleGroup(id: string) {
     const cur = filters.groups

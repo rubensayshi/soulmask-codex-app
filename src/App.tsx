@@ -257,7 +257,7 @@ function App() {
 
           {/* Filter bar */}
           {screen === 'roster' && layout !== 'split' && (
-            <FilterBar filters={filters} setFilters={setFilters} />
+            <FilterBar filters={filters} setFilters={setFilters} roster={rosterData} />
           )}
 
           {/* Content */}
@@ -278,7 +278,7 @@ function App() {
               <SplitLayout rows={rows} showProf={ENABLE_PROFICIENCIES} />
             )}
             {screen === 'planner' && (
-              <TrainingPlanner />
+              <TrainingPlanner roster={rosterData} />
             )}
           </div>
 
