@@ -40,59 +40,124 @@ def preprocess_for_ocr(img: np.ndarray, threshold: int = 70, use_red: bool = Fal
     return binary
 
 
-def ocr_region(img: np.ndarray, psm: int = 7, threshold: int = 70, use_red: bool = False) -> str:
+def ocr_region(img: np.ndarray, psm: int = 7, threshold: int = 70,
+               use_red: bool = False, whitelist: str | None = None) -> str:
     processed = preprocess_for_ocr(img, threshold=threshold, use_red=use_red)
     config = f"--psm {psm} --oem 3"
+    if whitelist:
+        config += f" -c tessedit_char_whitelist={whitelist}"
     text = pytesseract.image_to_string(processed, config=config)
     return text.strip()
 
 
+_NAME_FIXES = [
+    (r'^Sex\b', 'Ex'),
+    (r'^Spy\b', 'Ex'),
+    (r'\bGathererer\b', 'Gatherer'),
+    (r'\bDefendert\b', 'Defender'),
+]
+
+
 def parse_name(text: str) -> str:
-    # Strip leading OCR artifacts and punctuation
-    text = re.sub(r'^[\u25c6\u25c7\u2666<>\[\]\u00a9\u00ae\u00b0\u2022\u00b7&@#%~*\-_\d\s\'\"\u2018\u2019\u201c\u201d]+', '', text)
-    text = re.sub(r'^[a-z&@#~*\-]\s+', '', text)
-    text = re.sub(r'^x[a-z]?\s+', '', text, flags=re.IGNORECASE)
-    # OCR "|" is often "I"; treat as I when space-separated, else as space
     text = re.sub(r'(?<=\s)\|(?=\s)', 'I', text)
     text = re.sub(r'(?<=\S)\|(?=V)', ' I', text)
     text = re.sub(r'[|\u00ae\u00ab\u00bb\u00a9]', ' ', text)
+
+    text = re.sub(r'^[\u25c6\u25c7\u2666<>\[\]\u00a9\u00ae\u00b0\u2022\u00b7&@#%~*\-_\d\s\'\"\u2018\u2019\u201c\u201d()+:;,.!?/\\\u20ac{}]+', '', text)
+    text = re.sub(r'^[a-z&@#~*\-]\s+', '', text)
+    text = re.sub(r'^x[a-z]?\s+', '', text, flags=re.IGNORECASE)
+    # Strip single uppercase letter + space before a capitalized word (OCR bleed)
+    # Exclude I/V/X which could be valid roman numeral starts
+    text = re.sub(r'^[A-HJ-UW-Z]\s+(?=[A-Z][a-z])', '', text)
+
+    text = re.sub(r'\bl(?=[A-Z])', 'I', text)
+    text = re.sub(r'^[A-Z](?=[A-Z][a-z])', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
 
-    # Strip trailing non-alnum garbage before numeral normalization
-    text = re.sub(r'[<>\[\]{}()*&@#%]+$', '', text).strip()
+    text = re.sub(r'\(X\b', 'IX', text)
+    text = re.sub(r'\[V\b', 'IV', text)
+    text = re.sub(r'\(V\b', 'IV', text)
 
-    # Normalize roman numerals: OCR produces "VU"->VII, "VILL"->VIII, "VIe"->VI,
-    # "ll"/"Il"->II, "VL"->VI, "VIL"->VII, "lll"->III, trailing "l"->"I"
-    text = re.sub(r'(?<=[a-z])[lI]{2,3}(?=[\s<>\[\]{}()*&@#%]|$)', lambda m: ' ' + 'I' * len(m.group()), text)
-    text = re.sub(r'\s+[lI]{2,3}(?=[\s<>\[\]{}()*&@#%]|$)', lambda m: ' ' + 'I' * len(m.group().strip()), text)
-    text = re.sub(r'(?<=[a-z])l(?=\s|$)', ' I', text)
+    words = text.split()
+    while words:
+        w = words[-1]
+        if len(w) == 1 and w not in 'IVXLl':
+            words.pop()
+        elif re.match(r'^\d+$', w):
+            words.pop()
+        elif re.match(r'^[^a-zA-Z]+$', w):
+            words.pop()
+        elif len(w) <= 2 and not re.match(r'^[A-Z]{1,2}$', w) and not re.match(r'^[lI]+$', w):
+            words.pop()
+        elif re.search(r'[^a-zA-Z]', w) and len(w) <= 4:
+            words.pop()
+        else:
+            break
+    text = ' '.join(words)
+
+    text = re.sub(r'(?<=\s)[lI]{2,3}(?=[\s\W]|$)', lambda m: 'I' * len(m.group()), text)
+    text = re.sub(r'(?<=[a-z])[lI]{2,3}(?=[\s\W]|$)', lambda m: ' ' + 'I' * len(m.group()), text)
+    text = re.sub(r'(?<=\s)l(?=\s|$)', 'I', text)
+
     text = re.sub(r'VILL\b', 'VIII', text)
     text = re.sub(r'VIL\b', 'VII', text)
     text = re.sub(r'VUS\b', 'VII', text)
     text = re.sub(r'VU\b', 'VII', text)
     text = re.sub(r'Vie\b', 'VI', text)
+    text = re.sub(r'VIS\b', 'VI', text)
     text = re.sub(r'VL\b', 'VI', text)
+    text = re.sub(r'(?<=\s)LX\b', 'IX', text)
+
     text = re.sub(r'\s+(V?I{0,3})L(?=["\x27\u201c\u201d\u2018\u2019\s]|$)', lambda m: ' ' + m.group(1) + 'I', text)
     text = re.sub(r'["\x27\u201c\u201d\u2018\u2019]$', '', text).strip()
 
-    # Split stuck-together name+numeral: "MehVI"->"Meh VI", "MentorIII"->"Mentor III"
-    text = re.sub(r'([a-z])(VIII|VII|VI|IV|III|II|I)(?=\s|$)', lambda m: m.group(1) + ' ' + m.group(2), text)
+    text = re.sub(r'([a-z])(VIII|VII|VI|IX|IV|III|II|X|I)(?=[\s\W]|$)', lambda m: m.group(1) + ' ' + m.group(2), text)
     text = re.sub(r'\s+', ' ', text).strip()
 
-    # Extract trailing roman numeral (I-VIII) before stripping garbage
+    text = re.sub(r'(?<=\s)([IVX]{1,4})[^a-zA-Z\s]+\S*', r'\1', text)
+
     roman_suffix = ""
-    rm = re.search(r'\s+(VIII|VII|VI|IV|V|III|II|I)(?:\s|$)', text)
+    rm = re.search(r'\s+(VIII|VII|VI|IX|IV|V|III|II|X|I)(?:\s|$)', text)
     if rm:
         roman_suffix = " " + rm.group(1)
         text = text[:rm.start()]
-    # Strip trailing garbage
+
     text = re.sub(r'\s+[A-Za-z]*\s*\d+\s*[A-Za-z]*\s*$', '', text)
     text = re.sub(r'\s+[^\w\s].*$', '', text)
     text = re.sub(r'\s+[&@#<>\[\]\u00a9\u00ae\u00b0\u2022\u00b7\-_|:;,.!?\d]+$', '', text)
     if not re.search(r'\s+[IVXL]{1,5}$', text):
         text = re.sub(r'\s+\S{1,2}$', '', text)
     text = re.sub(r'[&@#\d\s.,:;!?]+$', '', text)
-    return (text + roman_suffix).strip()
+    result = (text + roman_suffix).strip()
+    if result and result[0] == 'l':
+        result = 'I' + result[1:]
+    for bad, good in _NAME_FIXES:
+        result = re.sub(bad, good, result)
+    return result
+
+
+_VALID_ROMAN_SET = {'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'}
+
+
+def _score_name(name: str) -> int:
+    if not name or not name[0].isupper():
+        return -100
+    alpha = sum(c.isalpha() for c in name)
+    if alpha < 3:
+        return -50
+    words = name.split()
+    score = min(alpha, 10) * 2
+    score += min(len(words), 3) * 3
+    score -= max(0, len(words) - 3) * 15
+    score += sum(3 for w in words if w and w[0].isupper())
+    score -= sum(5 for w in words if w and w[0].islower() and w not in ('of', 'the', 'and', 'in'))
+    score -= sum(3 for c in name if not c.isalpha() and c != ' ')
+    for w in words:
+        if w.isupper() and len(w) >= 2 and w not in _VALID_ROMAN_SET:
+            score -= 12
+    if re.search(r'\s+(VIII|VII|VI|IX|IV|V|III|II|X|I)$', name):
+        score += 5
+    return score
 
 
 KNOWN_CLANS = ["Flint", "Long", "Fang", "Claw", "Wolf", "Horn", "Outcast"]
@@ -102,12 +167,13 @@ _CLAN_MAP = {
     "lint": "Flint", "fint": "Flint", "flinlt": "Flint", "llint": "Flint",
     "ulint": "Flint", "illint": "Flint", "flintg": "Flint", "itinl": "Flint",
     "llmt": "Flint", "i lint": "Flint", "fi": "Flint",
-    "llint liibe": "Flint", "llint lnbe": "Flint", "llint i be": "Flint",
-    "llint lii": "Flint", "iint tibe": "Flint", "llmt tibe": "Flint",
-    "flint lii": "Flint",
+    "fiint": "Flint", "fliint": "Flint", "filnt": "Flint", "ftint": "Flint",
+    "flinl": "Flint", "rint": "Flint", "pint": "Flint", "finl": "Flint",
+    "falint": "Flint", "lhint": "Flint", "fitnt": "Flint", "ptnt": "Flint",
+    "hnt": "Flint",
     "long": "Long", "lang": "Long", "iane": "Long", "iang": "Long",
-    "ianp": "Long", "lanp": "Long", "lange": "Long",
-    "lang lhibe": "Long",
+    "ianp": "Long", "lanp": "Long", "lange": "Long", "llang": "Long",
+    "ang": "Long",
     "fang": "Fang", "fanpg": "Fang", "fanp": "Fang",
     "claw": "Claw", "ciaw": "Claw",
     "wolf": "Wolf", "wolt": "Wolf", "woll": "Wolf",
@@ -119,21 +185,99 @@ _CLAN_MAP = {
 
 def _normalize_clan(raw: str) -> str:
     key = raw.lower().strip()
-    if key in _CLAN_MAP:
-        return _CLAN_MAP[key]
-    # Try first word only (multi-word OCR artifacts)
-    first = key.split()[0] if key else ""
-    if first in _CLAN_MAP:
-        return _CLAN_MAP[first]
-    # Fuzzy fallback: check if any known clan is a substring
+    # Strip non-alpha except spaces, collapse spaces
+    cleaned = re.sub(r'[^a-z\s]', '', key).strip()
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    words = cleaned.split()
+    first = words[0] if words else ""
+    # Also try joining first 2 short words ("b ang" → "bang")
+    joined = ''.join(words[:2]) if len(words) >= 2 and len(words[0]) <= 2 else first
+
+    for candidate in [key, cleaned, first, joined]:
+        if candidate in _CLAN_MAP:
+            return _CLAN_MAP[candidate]
+
+    # Substring check
     for clan in KNOWN_CLANS:
-        if clan.lower() in key or key in clan.lower():
+        cl = clan.lower()
+        if cl in cleaned or first in cl:
             return clan
-    # Try first word fuzzy
+
+    # Edit distance fallback on first word
+    best_clan, best_dist = None, 999
     for clan in KNOWN_CLANS:
-        if clan.lower() in first or first in clan.lower():
-            return clan
+        cl = clan.lower()
+        for w in [first, joined]:
+            if not w:
+                continue
+            d = _edit_distance(w, cl)
+            if d < best_dist:
+                best_dist = d
+                best_clan = clan
+    if best_clan and best_dist <= max(2, len(first) // 2):
+        return best_clan
     return raw
+
+
+def _edit_distance(a: str, b: str) -> int:
+    if len(a) > len(b):
+        a, b = b, a
+    prev = list(range(len(a) + 1))
+    for j in range(1, len(b) + 1):
+        curr = [j] + [0] * len(a)
+        for i in range(1, len(a) + 1):
+            curr[i] = min(prev[i] + 1, curr[i - 1] + 1, prev[i - 1] + (a[i - 1] != b[j - 1]))
+        prev = curr
+    return prev[len(a)]
+
+
+_DIGIT_FIXES = str.maketrans({
+    'G': '6', 'O': '0', 'S': '5', 'B': '8',
+    'g': '6', 's': '5', 'b': '8',
+    'l': '1', 'i': '1', 'o': '0', '/': '7', 'I': '1',
+})
+
+
+def extract_level_number(level_img: np.ndarray) -> int | None:
+    """Extract level from tight crop using digit-only OCR + pattern matching + majority vote."""
+    h, w = level_img.shape[:2]
+    tight = level_img[:, :int(w * 0.25)]
+
+    candidates: list[int] = []
+    thresholds = [
+        (50, False), (65, False), (80, False), (100, False),
+        (80, True), (100, True), (120, True),
+    ]
+    for thresh, use_red in thresholds:
+        # Digit-whitelist pass: Tesseract only looks for digits
+        raw_d = ocr_region(tight, psm=8, threshold=thresh, use_red=use_red,
+                           whitelist="0123456789")
+        digits = re.sub(r'[^0-9]', '', raw_d)
+        if len(digits) >= 2:
+            val = int(digits[-2:])
+            if 1 <= val <= 60:
+                candidates.append(val)
+
+        # Pattern pass: find "V.XX" in full text and apply digit fixes
+        raw_f = ocr_region(tight, psm=7, threshold=thresh, use_red=use_red)
+        m = re.search(r'[VvNn¥]\.?\s*(\S{1,3}?)(?=\s|$)', raw_f)
+        if m:
+            fixed = m.group(1).translate(_DIGIT_FIXES)
+            fixed = re.sub(r'[^0-9]', '', fixed)
+            if len(fixed) >= 2:
+                val = int(fixed[-2:])
+                if 1 <= val <= 60:
+                    candidates.append(val)
+
+    if not candidates:
+        return None
+
+    from collections import Counter
+    counts = Counter(candidates)
+    best_val, best_count = counts.most_common(1)[0]
+    if best_count >= 2:
+        return best_val
+    return best_val if len(candidates) >= 2 else None
 
 
 def parse_level_line(text: str) -> dict:
@@ -154,19 +298,32 @@ def parse_level_line(text: str) -> dict:
         result["clan"] = _normalize_clan(clan_raw)
         text = text[:clan_match.start()] + text[clan_match.end():]
 
-    # Extract level: LV.32  (OCR misreads L→1/I, V→¥, or drops prefix)
-    level_match = re.search(r'(?:^|(?<=[\s|]))(?:[1lIL])?[Vv¥]\.?\s*(\d{1,3})(?=[\s).>]|$)', text)
+    # Extract level: LV.32  (OCR misreads L→1/I, V→¥, digits→letters)
+    _D = r'[0-9GOSBgosblIio/]'  # any char that could be an OCR-garbled digit
+    level_match = re.search(
+        r'(?:^|(?<=[\s|]))(?:[1lILi])?[Vv¥Nn]\.?\s*(' + _D + _D + r'{0,2})(?=[\s).>,;:A-Z\[]|[^a-zA-Z0-9]|$)',
+        text
+    )
     if not level_match:
-        # Bare leading digits: "33 Skilled Guard" (1+ spaces before alpha)
-        level_match = re.match(r'(\d{2,3})\s+(?=[A-Z])', text)
+        # LV stuck to leading garbage: "HILV.48" "ftv.ss" — require 2+ digit chars
+        level_match = re.search(
+            r'[Vv¥]\.?\s*(' + _D + r'{2,3})(?=[\s).>,;:A-Z\[]|[^a-zA-Z0-9]|$)',
+            text
+        )
+    if not level_match:
+        # Bare digits anywhere: "qu 32 Skilled" or "33 Skilled Guard"
+        level_match = re.search(r'(?:^|(?<=\s))(\d{2,3})(?=\s+[A-Z])', text)
     if level_match:
-        lv = int(level_match.group(1))
-        if lv <= 100:
-            result["level"] = lv
-        elif lv > 100 and lv < 1000:
-            # OCR prefix digit bled in: 359→59, 144→44
-            trimmed = lv % 100
-            result["level"] = trimmed if trimmed > 0 else None
+        raw_lv = level_match.group(1)
+        cleaned_lv = raw_lv.translate(_DIGIT_FIXES)
+        cleaned_lv = re.sub(r'[^0-9]', '', cleaned_lv)
+        lv = int(cleaned_lv) if cleaned_lv else None
+        if lv is not None:
+            if lv <= 100:
+                result["level"] = lv
+            elif 100 < lv < 1000:
+                trimmed = lv % 100
+                result["level"] = trimmed if trimmed > 0 else None
         text = text[:level_match.start()] + text[level_match.end():]
 
     class_name = text.strip().strip(".,;: ")
@@ -196,15 +353,23 @@ KNOWN_CLASSES = [
 _CLASS_WORD_FIXES = {
     "lhmler": "Hunter", "lhimler": "Hunter", "limler": "Hunter",
     "iimler": "Hunter", "himler": "Hunter", "lhunter": "Hunter",
+    "llimler": "Hunter", "llumter": "Hunter", "ilumter": "Hunter",
+    "ihmter": "Hunter", "tlimter": "Hunter", "himter": "Hunter",
+    "lmter": "Hunter", "lhmter": "Hunter", "lumter": "Hunter",
+    "iimter": "Hunter", "limter": "Hunter", "lhumter": "Hunter",
+    "hlimler": "Hunter", "hmter": "Hunter", "imler": "Hunter",
+    "imter": "Hunter", "unter": "Hunter", "unler": "Hunter",
     "labore": "Laborer", "larborer": "Laborer",
-    "wairior": "Warrior", "warri": "Warrior",
-    "guaid": "Guard", "gnard": "Guard",
+    "wairior": "Warrior", "warri": "Warrior", "wantior": "Warrior",
+    "wartior": "Warrior", "waniior": "Warrior", "warrion": "Warrior",
+    "guaid": "Guard", "gnard": "Guard", "guad": "Guard",
     "craltsman": "Craftsman", "craftman": "Craftsman",
+    "craftsmah": "Craftsman",
 }
 
 
 def _normalize_class(raw: str) -> str:
-    cleaned = re.sub(r'[|}{)\[\]0-9]', '', raw).strip()
+    cleaned = re.sub(r'[|}{)\[\]0-9:;,.!?\\]', '', raw).strip()
     cleaned = re.sub(r'\s+', ' ', cleaned)
     words = cleaned.split()
     for i, w in enumerate(words):
@@ -343,16 +508,39 @@ def parse_group(text: str) -> str | None:
 def extract_card_text(card_img: np.ndarray) -> CardText:
     from detect_cards import crop_region
 
-    # Name: white text, needs higher threshold to avoid dark bg noise
+    # Name: white text — try multiple thresholds and pick best result
     name_img = crop_region(card_img, "name")
-    name = parse_name(ocr_region(name_img, psm=7, threshold=110))
+    name_candidates = []
+    for t in [90, 110, 130]:
+        name_candidates.append(parse_name(ocr_region(name_img, psm=7, threshold=t)))
+    name_candidates.append(parse_name(ocr_region(name_img, psm=7, threshold=120, use_red=True)))
+    scored = [(c, _score_name(c)) for c in name_candidates]
+    name, best_score = max(scored, key=lambda x: x[1])
+    for cand, sc in scored:
+        if sc >= 10 and cand != name and name.startswith(cand + ' '):
+            extra = name[len(cand):].strip()
+            if extra and not re.match(r'^(VIII|VII|VI|IX|IV|V|III|II|X|I)$', extra):
+                name = cand
+                break
+    # If best name has a short leading word (1-2 chars) that looks like noise,
+    # prefer a candidate that matches the rest
+    best_words = name.split()
+    if len(best_words) >= 3 and len(best_words[0]) <= 2:
+        tail = ' '.join(best_words[1:])
+        for cand, sc in scored:
+            if sc >= 10 and cand == tail:
+                name = cand
+                break
 
     # Level/class/clan: purple text has poor grayscale contrast but high R channel.
-    # Run OCR on both channels and merge results.
     level_img = crop_region(card_img, "level_line")
     level_data_gray = parse_level_line(ocr_region(level_img, psm=7, threshold=65))
     level_data_red = parse_level_line(ocr_region(level_img, psm=7, threshold=100, use_red=True))
     level_data = _merge_level_data(level_data_gray, level_data_red)
+    # Digit-only OCR on tight level crop — more reliable than regex on garbled text
+    digit_level = extract_level_number(level_img)
+    if digit_level is not None:
+        level_data["level"] = digit_level
 
     status_img = crop_region(card_img, "status")
     # Status text can be white (Idle) or golden (Work Break). Try multiple thresholds.

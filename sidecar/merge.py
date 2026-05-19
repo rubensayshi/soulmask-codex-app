@@ -87,9 +87,20 @@ def _pick_best_field(candidates: list[dict], field: str) -> object:
         if known:
             return max(known, key=lambda x: x[1])[0]
     elif field == "level":
-        leveled = [(v, s) for v, s in values if isinstance(v, int) and v > 0]
+        leveled = [v for v, s in values if isinstance(v, int) and v > 0]
         if leveled:
-            return max(leveled, key=lambda x: x[1])[0]
+            from collections import Counter
+            counts = Counter(leveled)
+            top_val, top_count = counts.most_common(1)[0]
+            if top_count >= 2:
+                return top_val
+            return max(leveled, key=lambda v: counts[v])
+    elif field == "clan":
+        from collections import Counter
+        counts = Counter(v for v, s in values)
+        top_val, top_count = counts.most_common(1)[0]
+        if top_count >= 2:
+            return top_val
 
     return max(values, key=lambda x: x[1])[0]
 
