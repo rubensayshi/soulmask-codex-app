@@ -219,14 +219,12 @@ pub async fn debug_capture(app: AppHandle) -> Result<String, String> {
     ))
 }
 
-// ── Persistent captures directory ─────────────────────────────────────────────
+// ── Captures directory ────────────────────────────────────────────────────────
+// Use temp dir so the Windows Store Python (which has a virtualized AppData
+// view) can always read the files we pass to the sidecar.
 
-fn captures_dir(app: &AppHandle) -> Result<std::path::PathBuf, String> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?
-        .join("captures");
+fn captures_dir(_app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = std::env::temp_dir().join("screenread_captures");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     Ok(dir)
 }
@@ -340,6 +338,10 @@ async fn process_queue_loop(app: &AppHandle) {
                 log_to_file(&format!("[queue] processing failed: {}", e));
                 app.emit("capture:error", e).ok();
             }
+        }
+        // Clean up temp PNGs after processing.
+        for p in &paths {
+            let _ = std::fs::remove_file(p);
         }
     }
 

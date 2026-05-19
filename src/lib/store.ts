@@ -87,6 +87,7 @@ let logSeq = 0
 
 interface RosterState {
   tribesmen: Tribesman[]
+  initialized: boolean
   lastUpdated: string | null
   captureStatus: CaptureStatus
   captureError: string | null
@@ -96,6 +97,7 @@ interface RosterState {
   captureLog: LogEntry[]
 
   loadRoster: (roster: { last_updated: string; tribesmen: unknown[] }) => void
+  markInitialized: () => void
   clearRoster: () => void
   setCaptureStatus: (s: CaptureStatus) => void
   setCaptureError: (e: string) => void
@@ -118,6 +120,7 @@ function appendLog(state: { captureLog: LogEntry[] }, level: LogLevel, message: 
 
 export const useRosterStore = create<RosterState>((set) => ({
   tribesmen: [],
+  initialized: false,
   lastUpdated: null,
   captureStatus: 'idle',
   captureError: null,
@@ -132,10 +135,12 @@ export const useRosterStore = create<RosterState>((set) => ({
       const raw = t as RawTribesman & { id?: string; star?: number }
       return normalizeTribesman(raw, (raw as { captured_at?: string }).captured_at ?? now)
     })
-    return set({ tribesmen, lastUpdated: roster.last_updated })
+    return set({ tribesmen, lastUpdated: roster.last_updated, initialized: true })
   },
 
-  clearRoster: () => set({ tribesmen: [], lastUpdated: null }),
+  markInitialized: () => set({ initialized: true }),
+
+  clearRoster: () => set({ tribesmen: [], lastUpdated: null, initialized: true }),
 
   setCaptureStatus: (s) => set((state) => ({
     captureStatus: s,

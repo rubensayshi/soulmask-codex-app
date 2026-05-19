@@ -27,16 +27,20 @@ function App() {
   const [showCapture, setShowCapture] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showLog, setShowLog] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const store = useRosterStore()
-  const rosterData = store.tribesmen.length > 0 ? store.tribesmen : (import.meta.env.DEV ? MOCK_ROSTER : [])
+  const rosterData = store.tribesmen.length > 0 ? store.tribesmen : (import.meta.env.DEV && !store.initialized ? MOCK_ROSTER : [])
 
   // Load persisted roster on startup
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return
     invoke<{ last_updated: string; tribesmen: unknown[] } | null>('load_roster')
-      .then(raw => { if (raw) store.loadRoster(raw as Parameters<typeof store.loadRoster>[0]) })
-      .catch(console.error)
+      .then(raw => {
+        if (raw) store.loadRoster(raw as Parameters<typeof store.loadRoster>[0])
+        else store.markInitialized()
+      })
+      .catch(() => store.markInitialized())
   }, [])
 
   // Auto-save roster whenever tribesmen change
@@ -257,6 +261,37 @@ function App() {
               <kbd style={{ ...kbdStyle, fontSize: 9, padding: '1px 4px' }}>⌘K</kbd>
             </div>
 
+            {confirmClear ? (
+              <span className="inline-flex items-center gap-1">
+                <button
+                  className="btn-outline"
+                  style={{ color: 'oklch(0.65 0.2 25)', borderColor: 'oklch(0.45 0.15 25)' }}
+                  onClick={() => {
+                    store.clearRoster()
+                    if ('__TAURI_INTERNALS__' in window) {
+                      invoke('save_roster', {
+                        roster: { last_updated: new Date().toISOString(), tribesmen: [] }
+                      }).catch(console.error)
+                    }
+                    setConfirmClear(false)
+                  }}
+                >
+                  <IcoTrash size={12} />Confirm clear
+                </button>
+                <button className="btn-outline" onClick={() => setConfirmClear(false)}>
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              <button
+                className="btn-outline"
+                style={{ color: 'var(--color-muted)' }}
+                onClick={() => setConfirmClear(true)}
+                title="Clear all roster data"
+              >
+                <IcoTrash size={12} />Clear
+              </button>
+            )}
             <div
               className="inline-flex gap-px rounded-[var(--radius)]"
               style={{

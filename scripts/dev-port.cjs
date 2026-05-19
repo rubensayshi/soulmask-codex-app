@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const path = require("path");
 
-const MAIN_REPO = "/Users/ruben/work/private/soulmask-codex-app";
+const MAIN_REPO = "C:\\Users\\ruben\\OneDrive\\Documenten\\Projects\\SoulmaskApp";
 const root = path.resolve(__dirname, "..");
 
 function getDevPort() {
