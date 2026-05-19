@@ -1,4 +1,4 @@
-import { CLANS, GROUPS, STATUS_LABEL } from '../lib/data'
+import { CLANS, STATUS_LABEL } from '../lib/data'
 import type { ClanName, StatusType } from '../lib/types'
 import { GroupDots } from './Icons'
 
@@ -17,8 +17,7 @@ export function ClanTag({ clan }: { clan: ClanName }) {
 }
 
 export function GroupTag({ group, muted = false }: { group: string; muted?: boolean }) {
-  const g = GROUPS.find(x => x.id === group)
-  if (!g) return null
+  if (!group) return null
   const isUnset = group === 'unassigned'
   return (
     <span
@@ -35,7 +34,7 @@ export function GroupTag({ group, muted = false }: { group: string; muted?: bool
       <span style={{ color: 'var(--color-accent)', opacity: 0.75, display: 'inline-flex' }}>
         <GroupDots />
       </span>
-      {g.name}
+      {group}
     </span>
   )
 }
