@@ -88,7 +88,11 @@ function App() {
     })
     if (!path) return
     const data = { last_updated: store.lastUpdated ?? new Date().toISOString(), tribesmen: store.tribesmen }
-    await writeTextFile(path, JSON.stringify(data, null, 2))
+    try {
+      await writeTextFile(path, JSON.stringify(data, null, 2))
+    } catch (e) {
+      alert(`Export failed: ${e}`)
+    }
   }
 
   async function handleImport() {
@@ -97,10 +101,14 @@ function App() {
       multiple: false,
     })
     if (!path) return
-    const text = await readTextFile(path)
-    const data = JSON.parse(text)
-    if (data.tribesmen && Array.isArray(data.tribesmen)) {
-      store.loadRoster({ last_updated: data.last_updated ?? new Date().toISOString(), tribesmen: data.tribesmen })
+    try {
+      const text = await readTextFile(path)
+      const data = JSON.parse(text)
+      if (data.tribesmen && Array.isArray(data.tribesmen)) {
+        store.loadRoster({ last_updated: data.last_updated ?? new Date().toISOString(), tribesmen: data.tribesmen })
+      }
+    } catch (e) {
+      alert(`Import failed: ${e}`)
     }
   }
 
