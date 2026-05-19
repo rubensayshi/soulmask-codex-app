@@ -1,5 +1,15 @@
 import { useState } from 'react'
-import type { BadgeShape, TraitMatch } from '../lib/types'
+import type { BadgeShape, Tier, TraitMatch } from '../lib/types'
+import { useEffectiveTier } from '../lib/tierStore'
+
+export const TIER_COLORS: Record<Tier, { bg: string; text: string }> = {
+  S: { bg: 'oklch(0.55 0.20 25)',  text: '#fff' },
+  A: { bg: 'oklch(0.60 0.16 60)',  text: '#fff' },
+  B: { bg: 'oklch(0.52 0.14 300)', text: '#fff' },
+  C: { bg: 'oklch(0.45 0.00 0)',   text: '#ccc' },
+  D: { bg: 'oklch(0.38 0.03 60)',  text: '#bbb' },
+  F: { bg: 'oklch(0.35 0.10 20)',  text: '#daa' },
+}
 
 const SHAPE_COLORS: Record<BadgeShape, { stroke: string; fill: string; glyph: string }> = {
   hexagon: { stroke: 'oklch(0.55 0.08 165)', fill: 'oklch(0.20 0.02 165)', glyph: 'oklch(0.70 0.08 165)' },
@@ -45,6 +55,9 @@ export function TraitBadge({ trait, size = 24, withPips = true }: Props) {
   const glyph = GLYPHS[hashGlyph(trait.id)]
   const iconSize = Math.ceil(size * 0.7)
 
+  const tier = useEffectiveTier(trait.icon_name, trait.tier)
+  const tc = tier ? TIER_COLORS[tier] : null
+
   return (
     <span className="inline-flex flex-col items-center" style={{ width: size }}>
       <span className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
@@ -64,6 +77,25 @@ export function TraitBadge({ trait, size = 24, withPips = true }: Props) {
             style={{ width: iconSize, height: iconSize }}
             onError={() => setImgErr(true)}
           />
+        )}
+        {tc && (
+          <span
+            className="absolute flex items-center justify-center"
+            style={{
+              top: -3, right: -4,
+              width: 11, height: 11,
+              borderRadius: '50%',
+              background: tc.bg,
+              color: tc.text,
+              fontSize: 7,
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 700,
+              lineHeight: 1,
+              border: '1px solid oklch(0.16 0.006 130)',
+            }}
+          >
+            {tier}
+          </span>
         )}
       </span>
       {withPips && (
@@ -91,6 +123,8 @@ export function TraitBadgeLg({ trait }: { trait: TraitMatch }) {
   const path = SHAPE_PATHS[trait.shape]
   const glyph = GLYPHS[hashGlyph(trait.id)]
   const iconSize = Math.ceil(size * 0.7)
+  const tier = useEffectiveTier(trait.icon_name, trait.tier)
+  const tc = tier ? TIER_COLORS[tier] : null
 
   return (
     <span className="relative inline-flex items-center justify-center flex-shrink-0" style={{ width: size, height: size }}>
@@ -110,6 +144,25 @@ export function TraitBadgeLg({ trait }: { trait: TraitMatch }) {
           style={{ width: iconSize, height: iconSize }}
           onError={() => setImgErr(true)}
         />
+      )}
+      {tc && (
+        <span
+          className="absolute flex items-center justify-center"
+          style={{
+            top: -3, right: -5,
+            width: 14, height: 14,
+            borderRadius: '50%',
+            background: tc.bg,
+            color: tc.text,
+            fontSize: 8.5,
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 700,
+            lineHeight: 1,
+            border: '1px solid oklch(0.16 0.006 130)',
+          }}
+        >
+          {tier}
+        </span>
       )}
     </span>
   )

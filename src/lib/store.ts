@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Tribesman, ProcessResult, TraitMatch, ClanName, StatusType } from './types'
 import { TRAIT_BY_ICON } from './data'
-import { getBestTrait } from './traits'
+import { getBestTrait, getTierForIcon, getTierForName } from './traits'
 
 // ── Sidecar output shape (class instead of klass, group/status as strings, no id/prof) ──
 interface RawTribesman {
@@ -41,6 +41,7 @@ function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
   const traits: TraitMatch[] = rawTraits.map(t => {
     const def = TRAIT_BY_ICON[t.icon_name]
     const info = getBestTrait(t.icon_name)
+    const tierInfo = getTierForIcon(t.icon_name) ?? (def ? getTierForName(def.name) : null)
     return {
       icon_name: t.icon_name,
       confidence: t.confidence,
@@ -49,6 +50,9 @@ function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
       shape: def?.shape ?? 'hexagon',
       eff: def?.eff ?? '',
       star: info?.star ?? 1,
+      tier: tierInfo?.tier ?? null,
+      tier_tags: tierInfo?.tags,
+      tier_note: tierInfo?.note,
     }
   })
   const name = String(raw.name ?? '')

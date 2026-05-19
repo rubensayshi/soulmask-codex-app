@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import type { Tribesman, TraitMatch, SortState, BadgeShape } from '../lib/types'
+import type { Tribesman, TraitMatch, SortState, BadgeShape, Tier } from '../lib/types'
 import { ClanTag, GroupTag } from '../components/Parts'
 import { PROF_SKILLS } from '../lib/data'
-import { TraitBadge, TraitBadgeLg, SHAPE_COLORS } from '../components/TraitBadge'
+import { TraitBadge, TraitBadgeLg, SHAPE_COLORS, TIER_COLORS } from '../components/TraitBadge'
 import { IcoChevRight } from '../components/Icons'
+import { useEffectiveTier, useTierStore } from '../lib/tierStore'
 
 interface Props {
   rows: Tribesman[]
@@ -233,11 +234,25 @@ function Dd({ children }: { children: React.ReactNode }) {
   return <dd style={{ margin: 0, color: 'var(--color-text)', alignSelf: 'center' }}>{children}</dd>
 }
 
+const ALL_TIERS: (Tier | null)[] = ['S', 'A', 'B', 'C', 'D', 'F', null]
+
 function TraitDetailItem({ trait }: { trait: TraitMatch }) {
   const c = SHAPE_COLORS[trait.shape]
+  const tier = useEffectiveTier(trait.icon_name, trait.tier)
+  const setTier = useTierStore(s => s.setTier)
+  const removeTier = useTierStore(s => s.removeTier)
+  const [popoverOpen, setPopoverOpen] = useState(false)
+  const tc = tier ? TIER_COLORS[tier] : null
   const sourceLabel = trait.shape === 'hexagon' ? 'Learned · Talent'
     : trait.shape === 'diamond' ? 'Preference'
     : 'Innate · Tribe-born'
+
+  const pickTier = (t: Tier | null) => {
+    if (t) setTier(trait.icon_name, t)
+    else removeTier(trait.icon_name)
+    setPopoverOpen(false)
+  }
+
   return (
     <div className="flex gap-3 items-start" style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border-soft)' }}>
       <TraitBadgeLg trait={trait} />
@@ -247,13 +262,77 @@ function TraitDetailItem({ trait }: { trait: TraitMatch }) {
           <span style={{ color: 'var(--color-gold)', fontSize: 11 }}>
             {'★'.repeat(trait.star)}
           </span>
+          <span className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setPopoverOpen(!popoverOpen) }}
+              title="Click to change tier"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 5px', height: 16, borderRadius: 3,
+                background: tc?.bg ?? 'var(--color-border)',
+                color: tc?.text ?? 'var(--color-muted)',
+                fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
+                letterSpacing: '0.04em',
+                cursor: 'pointer',
+                opacity: tc ? 1 : 0.5,
+              }}
+            >
+              {tier ?? '—'}
+            </button>
+            {popoverOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setPopoverOpen(false)} />
+                <div
+                  className="absolute z-50 flex gap-0.5 rounded-[var(--radius)] border border-border-soft"
+                  style={{
+                    top: '100%', left: '50%', transform: 'translateX(-50%)',
+                    marginTop: 4, padding: 3,
+                    background: 'var(--color-bg-elev)',
+                    boxShadow: '0 8px 24px oklch(0 0 0 / 0.5)',
+                  }}
+                >
+                  {ALL_TIERS.map(t => {
+                    const colors = t ? TIER_COLORS[t] : null
+                    const active = t === tier
+                    return (
+                      <button
+                        key={t ?? 'none'}
+                        onClick={(e) => { e.stopPropagation(); pickTier(t) }}
+                        style={{
+                          width: 22, height: 22, borderRadius: 3,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: active ? (colors?.bg ?? 'var(--color-border)') : 'transparent',
+                          color: active ? (colors?.text ?? 'var(--color-muted)') : (colors?.bg ?? 'var(--color-muted)'),
+                          fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
+                          cursor: 'pointer',
+                          border: active ? '1px solid oklch(1 0 0 / 0.15)' : '1px solid transparent',
+                        }}
+                      >
+                        {t ?? '—'}
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </span>
         </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: c.stroke, letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: 2 }}>
           {sourceLabel}
+          {trait.tier_tags?.length ? (
+            <span style={{ color: 'var(--color-muted)', marginLeft: 8 }}>
+              {trait.tier_tags.join(' · ')}
+            </span>
+          ) : null}
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--color-text-dim)', marginTop: 4 }}>
           {trait.eff}
         </div>
+        {trait.tier_note && (
+          <div style={{ fontSize: 10.5, color: 'var(--color-muted)', marginTop: 3, fontStyle: 'italic' }}>
+            {trait.tier_note}
+          </div>
+        )}
       </div>
     </div>
   )
