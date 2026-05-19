@@ -52,9 +52,12 @@ export interface ProcessResult {
 export interface TraitInfo {
   id: string
   star: number
+  name?: string
   name_zh: string
+  description?: string
   description_zh: string | null
   source: string
+  shape?: BadgeShape
   icon_name: string
   is_negative: boolean
   clan: string | null
