@@ -13,7 +13,9 @@ import { FilterBar } from './components/FilterBar'
 import { CaptureModal } from './components/CaptureModal'
 import { ReviewScreen } from './components/ReviewScreen'
 import { SettingsModal } from './components/SettingsModal'
-import { IcoCompass, IcoUsers, IcoCamera, IcoFlag, IcoCog, IcoSearch, IcoExport, IcoTable, IcoCards, IcoSplit, IcoTerminal, IcoTrash, IcoTarget } from './components/Icons'
+import { save, open } from '@tauri-apps/plugin-dialog'
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { IcoCompass, IcoUsers, IcoCamera, IcoFlag, IcoCog, IcoSearch, IcoExport, IcoImport, IcoTable, IcoCards, IcoSplit, IcoTerminal, IcoTrash, IcoTarget } from './components/Icons'
 import './styles.css'
 
 function App() {
@@ -74,6 +76,29 @@ function App() {
     () => sortRows(filterRows(rosterData, filters, query), sort),
     [rosterData, filters, query, sort],
   )
+
+  async function handleExport() {
+    const path = await save({
+      defaultPath: 'roster.json',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
+    if (!path) return
+    const data = { last_updated: store.lastUpdated ?? new Date().toISOString(), tribesmen: store.tribesmen }
+    await writeTextFile(path, JSON.stringify(data, null, 2))
+  }
+
+  async function handleImport() {
+    const path = await open({
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      multiple: false,
+    })
+    if (!path) return
+    const text = await readTextFile(path)
+    const data = JSON.parse(text)
+    if (data.tribesmen && Array.isArray(data.tribesmen)) {
+      store.loadRoster({ last_updated: data.last_updated ?? new Date().toISOString(), tribesmen: data.tribesmen })
+    }
+  }
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
@@ -232,9 +257,18 @@ function App() {
               <kbd style={{ ...kbdStyle, fontSize: 9, padding: '1px 4px' }}>⌘K</kbd>
             </div>
 
-            <button className="btn-outline">
-              <IcoExport />Export
-            </button>
+            <div
+              className="inline-flex gap-px rounded-[var(--radius)]"
+              style={{
+                height: 30,
+                border: '1px solid var(--color-border)',
+                background: 'oklch(0.18 0.008 130)',
+                padding: 2,
+              }}
+            >
+              <SegBtn on={false} onClick={handleImport}><IcoImport /></SegBtn>
+              <SegBtn on={false} onClick={handleExport}><IcoExport /></SegBtn>
+            </div>
             <button className="btn-primary" onClick={() => setShowCapture(true)}>
               <IcoCamera size={12} />Capture
             </button>
