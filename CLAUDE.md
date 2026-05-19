@@ -14,7 +14,8 @@ Soulmask Codex App — a Tauri 2 desktop application for managing Soulmask tribe
 
 ```bash
 pnpm dev                # Vite dev server on :1420 (browser-only, no Tauri)
-pnpm tauri dev          # Full Tauri app with hot reload
+pnpm tauri dev          # Full Tauri app with hot reload (main repo only)
+pnpm tauri:dev          # Full Tauri app with hot reload (worktree-safe, dynamic port)
 pnpm build              # tsc + vite build (frontend production bundle)
 pnpm typecheck          # tsc --noEmit
 
@@ -40,6 +41,7 @@ cd src-tauri && cargo build
 | Trait atlas      | `assets/atlas/`      | Reference PNGs for template matching     |
 | Test fixtures   | `fixtures/`          | Screenshot samples for OCR tuning        |
 | Design docs     | `docs/`              | UI spec, design docs, plans              |
+| Dev scripts     | `scripts/`           | Worktree port helpers (`dev-port.cjs`)   |
 
 ## Architecture
 
@@ -74,6 +76,7 @@ cd src-tauri && cargo build
 - **OCR thresholds**: game text is light-on-dark with semi-transparent backgrounds. OCR uses multiple threshold/channel combinations and merges results. Tuning values are in `ocr_text.py`
 - **Clan name mapping**: OCR frequently mangles clan names; `ocr_text.py` has a hardcoded `CLAN_MAP` fuzzy lookup table
 - **Feature flags**: `ENABLE_PROFICIENCIES` in `data.ts` gates the proficiency columns (currently `false`)
+- **Worktree dev ports**: `scripts/dev-port.cjs` hashes the repo path to derive a unique Vite port per worktree (main repo = 1420, worktrees = 1100-1999). `pnpm dev` picks this up automatically; for Tauri use `pnpm tauri:dev` which passes the matching `devUrl` override
 
 ## Styling
 
