@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CLANS, GROUPS, PROF_SKILLS, ENABLE_PROFICIENCIES } from '../lib/data'
+import { CLANS, PROF_SKILLS, ENABLE_PROFICIENCIES } from '../lib/data'
 import type { Filters, ClanName, Tribesman } from '../lib/types'
 
 const CLAN_LIST: ClanName[] = ['Claw', 'Flint', 'Fang', 'Wolf', 'Horn', 'Exile', 'DLC']
@@ -11,6 +11,14 @@ interface Props {
 }
 
 export function FilterBar({ filters, setFilters, roster }: Props) {
+  const allGroups = useMemo(() => {
+    const seen = new Set<string>()
+    for (const tm of roster) {
+      if (tm.group) seen.add(tm.group)
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b))
+  }, [roster])
+
   const allTraitNames = useMemo(() => {
     const seen = new Map<string, string>()
     for (const tm of roster) {
@@ -111,10 +119,10 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
       <Chip on={allGroupsActive} onClick={() => setFilters({ ...filters, groups: [] })}>
         All
       </Chip>
-      {GROUPS.map(g => {
-        const on = filters.groups.includes(g.id)
+      {allGroups.map(g => {
+        const on = filters.groups.includes(g)
         return (
-          <Chip key={g.id} on={on} onClick={() => toggleGroup(g.id)} title={g.hint}>
+          <Chip key={g} on={on} onClick={() => toggleGroup(g)}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: on ? 'var(--color-accent)' : 'var(--color-muted)' }}>
               <svg width={8} height={8} viewBox="0 0 10 10">
                 <circle cx="2" cy="2" r="1.2" fill="currentColor" />
@@ -125,7 +133,7 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
                 <circle cx="8" cy="5" r="1.2" fill="currentColor" />
               </svg>
             </span>
-            {g.name}
+            {g}
           </Chip>
         )
       })}
