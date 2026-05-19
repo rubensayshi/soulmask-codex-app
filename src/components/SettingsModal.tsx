@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { IcoX } from './Icons'
+import { useTierStore } from '../lib/tierStore'
 
 interface Props {
   onClose: () => void
@@ -131,6 +132,8 @@ export function SettingsModal({ onClose }: Props) {
             <Toggle on={launch} onChange={setLaunch} />
           </SettingRow>
         </SettingGroup>
+
+        <TierRankingsGroup />
       </div>
     </div>
   )
@@ -221,5 +224,65 @@ function Select({ value, onChange, options }: { value: string; onChange: (v: str
     >
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
+  )
+}
+
+function TierRankingsGroup() {
+  const overrides = useTierStore(s => s.overrides)
+  const importOverrides = useTierStore(s => s.importOverrides)
+  const resetAll = useTierStore(s => s.resetAll)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const count = Object.keys(overrides).length
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(overrides, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'tier-overrides.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result as string)
+        importOverrides(data)
+      } catch { /* ignore bad files */ }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
+  return (
+    <SettingGroup title="Tier rankings">
+      <SettingRow
+        label="Custom overrides"
+        sub={count > 0 ? `${count} trait${count !== 1 ? 's' : ''} customized. Click any tier badge in the roster to edit.` : 'Using default rankings. Click any tier badge in the roster to customize.'}
+      >
+        <div className="flex items-center gap-1.5">
+          {count > 0 && (
+            <button className="btn-outline" style={{ height: 28, padding: '0 8px', fontSize: 11 }} onClick={resetAll}>
+              Reset
+            </button>
+          )}
+        </div>
+      </SettingRow>
+      <SettingRow label="Import / export" sub="Share custom tier rankings as JSON.">
+        <div className="flex items-center gap-1.5">
+          <input ref={fileRef} type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
+          <button className="btn-outline" style={{ height: 28, padding: '0 8px', fontSize: 11 }} onClick={() => fileRef.current?.click()}>
+            Import
+          </button>
+          <button className="btn-outline" style={{ height: 28, padding: '0 8px', fontSize: 11 }} onClick={handleExport}>
+            Export
+          </button>
+        </div>
+      </SettingRow>
+    </SettingGroup>
   )
 }

@@ -1,6 +1,7 @@
 export type ClanName = 'Claw' | 'Flint' | 'Fang' | 'Wolf' | 'Horn' | 'Exile' | 'DLC'
 export type StatusType = 'idle' | 'hosting' | 'mining' | 'work-break' | 'resting'
 export type BadgeShape = 'hexagon' | 'diamond' | 'shield'
+export type Tier = 'S' | 'A' | 'B' | 'C' | 'D' | 'F'
 export type LayoutMode = 'table' | 'cards' | 'split'
 
 export interface TraitMatch {
@@ -11,6 +12,9 @@ export interface TraitMatch {
   shape: BadgeShape
   eff: string
   star: number
+  tier?: Tier | null
+  tier_tags?: string[]
+  tier_note?: string
 }
 
 export interface Group {

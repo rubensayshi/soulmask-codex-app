@@ -1,4 +1,5 @@
 import type { Tribesman, Group, ClanName, StatusType, TraitMatch, BadgeShape } from './types'
+import { getTierForIcon, getTierForName } from './traits'
 
 export const ENABLE_PROFICIENCIES = false
 
@@ -95,15 +96,22 @@ export const MOCK_ROSTER: Tribesman[] = NAMES.map((name, i) => {
   const level = 12 + ((i * 7) % 49)
   const traitCount = 6 + (i % 9)
   const tIds = shuf(TRAIT_IDS, i + 2).slice(0, traitCount)
-  const traits: TraitMatch[] = tIds.map((id, k) => ({
-    id,
-    icon_name: TRAIT_DEFS[id].icon,
-    name: TRAIT_DEFS[id].name,
-    shape: TRAIT_DEFS[id].shape,
-    eff: TRAIT_DEFS[id].eff,
-    star: 1 + ((i + k) % 3),
-    confidence: 0.7 + ((i + k * 3) % 30) / 100,
-  }))
+  const traits: TraitMatch[] = tIds.map((id, k) => {
+    const def = TRAIT_DEFS[id]
+    const tierInfo = getTierForIcon(def.icon) ?? getTierForName(def.name)
+    return {
+      id,
+      icon_name: def.icon,
+      name: def.name,
+      shape: def.shape,
+      eff: def.eff,
+      star: 1 + ((i + k) % 3),
+      confidence: 0.7 + ((i + k * 3) % 30) / 100,
+      tier: tierInfo?.tier ?? null,
+      tier_tags: tierInfo?.tags,
+      tier_note: tierInfo?.note,
+    }
+  })
   const prof = Array.from({ length: 8 }, (_, k) => Math.min(200, ((i * 17 + k * 37 + 11) % 180) + (level > 40 ? 40 : 0)))
   const groupIdx = (i * 5 + 3) % 7
   const group = groupIdx < GROUPS.length ? GROUPS[groupIdx].id : 'unassigned'
