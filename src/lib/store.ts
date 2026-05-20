@@ -121,10 +121,20 @@ function appendLog(state: { captureLog: LogEntry[] }, level: LogLevel, message: 
   return [...state.captureLog, entry]
 }
 
+function loadSessionState(): Partial<RosterState> | undefined {
+  if (!import.meta.env.DEV || '__TAURI_INTERNALS__' in window) return undefined
+  try {
+    const raw = sessionStorage.getItem('roster_dev')
+    return raw ? JSON.parse(raw) : undefined
+  } catch { return undefined }
+}
+
+const _devState = loadSessionState()
+
 export const useRosterStore = create<RosterState>((set) => ({
-  tribesmen: [],
-  initialized: false,
-  lastUpdated: null,
+  tribesmen: _devState?.tribesmen ?? [],
+  initialized: _devState?.initialized ?? false,
+  lastUpdated: _devState?.lastUpdated ?? null,
   captureStatus: 'idle',
   captureError: null,
   lastCaptureCount: null,
@@ -225,3 +235,15 @@ export const useRosterStore = create<RosterState>((set) => ({
 
   clearLog: () => set({ captureLog: [] }),
 }))
+
+if (import.meta.env.DEV && !('__TAURI_INTERNALS__' in window)) {
+  useRosterStore.subscribe((s) => {
+    try {
+      sessionStorage.setItem('roster_dev', JSON.stringify({
+        tribesmen: s.tribesmen,
+        initialized: s.initialized,
+        lastUpdated: s.lastUpdated,
+      }))
+    } catch { /* quota exceeded — ignore */ }
+  })
+}
