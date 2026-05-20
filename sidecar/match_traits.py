@@ -103,12 +103,12 @@ def segment_icons(trait_row: np.ndarray, expected_size: int = 64) -> list[tuple[
     """
     gray = cv2.cvtColor(trait_row, cv2.COLOR_BGR2GRAY) if len(trait_row.shape) == 3 else trait_row
     h, w = gray.shape
-    min_side = max(int(expected_size * 0.5), 20)
+    min_side = max(int(expected_size * 0.4), 16)
     max_side = int(expected_size * 2.0)
 
     candidates: list[tuple[int, int, int]] = []
-    for thresh in range(20, 120, 10):
-        _, binary = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)
+
+    def _collect(binary: np.ndarray) -> None:
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for cnt in contours:
             bx, by, bw, bh = cv2.boundingRect(cnt)
@@ -120,6 +120,15 @@ def segment_icons(trait_row: np.ndarray, expected_size: int = 64) -> list[tuple[
             side = max(bw, bh)
             cx, cy = bx + bw // 2, by + bh // 2
             candidates.append((cx, cy, side))
+
+    for thresh in range(20, 120, 10):
+        _, binary = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)
+        _collect(binary)
+
+    for block in [15, 21]:
+        binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                       cv2.THRESH_BINARY, block, -3)
+        _collect(binary)
 
     if not candidates:
         return []
@@ -190,6 +199,7 @@ def match_icon(icon_img: np.ndarray, atlas: dict[str, np.ndarray]) -> TraitMatch
 class _SubsetResult:
     match: TraitMatch
     z_score: float
+    ranked: list[tuple[str, float]]  # all (name, score) pairs sorted desc
 
 
 def _match_icon_scored(icon_img: np.ndarray, atlas: dict[str, np.ndarray]) -> _SubsetResult | None:
@@ -200,16 +210,14 @@ def _match_icon_scored(icon_img: np.ndarray, atlas: dict[str, np.ndarray]) -> _S
     if icon_img.shape[0] != target_size or icon_img.shape[1] != target_size:
         icon_img = cv2.resize(icon_img, (target_size, target_size))
 
-    scores: list[float] = []
-    best_name = ""
-    best_score = -1.0
+    name_scores: list[tuple[str, float]] = []
     for name, ref in atlas.items():
         result = cv2.matchTemplate(icon_img, ref, cv2.TM_CCORR_NORMED)
-        s = float(result[0][0])
-        scores.append(s)
-        if s > best_score:
-            best_score = s
-            best_name = name
+        name_scores.append((name, float(result[0][0])))
+
+    name_scores.sort(key=lambda x: x[1], reverse=True)
+    best_name, best_score = name_scores[0]
+    scores = [s for _, s in name_scores]
 
     arr = np.array(scores)
     mean = float(arr.mean())
@@ -219,7 +227,7 @@ def _match_icon_scored(icon_img: np.ndarray, atlas: dict[str, np.ndarray]) -> _S
     expected_max = float(np.sqrt(2.0 * np.log(max(n, 2))))
     z_norm = z / expected_max if expected_max > 0 else z
     m = TraitMatch(icon_name=best_name, confidence=best_score, bbox=(0, 0, 0, 0))
-    return _SubsetResult(match=m, z_score=z_norm)
+    return _SubsetResult(match=m, z_score=z_norm, ranked=name_scores)
 
 
 def _assign_zones(icons: list[tuple[np.ndarray, int, int]]) -> list[str]:
@@ -255,8 +263,45 @@ def _assign_zones(icons: list[tuple[np.ndarray, int, int]]) -> list[str]:
     return zones
 
 
+def _dedup_matches(candidates: list) -> list[TraitMatch]:
+    """Deduplicate by icon_name: when two icons match the same template,
+    the weaker one falls back to its next-best above-threshold match."""
+    taken: dict[str, int] = {}
+    result: list[TraitMatch] = [c.match for c in candidates]
+
+    for idx, c in enumerate(candidates):
+        name = c.match.icon_name
+        prev_idx = taken.get(name)
+        if prev_idx is None:
+            taken[name] = idx
+            continue
+        prev = candidates[prev_idx]
+        loser_idx = prev_idx if c.match.confidence > prev.match.confidence else idx
+        winner_idx = idx if loser_idx == prev_idx else prev_idx
+        taken[name] = winner_idx
+
+        loser = candidates[loser_idx]
+        reassigned = False
+        for alt_name, alt_score in loser.ranked:
+            if alt_name == name:
+                continue
+            if alt_score < loser.threshold:
+                break
+            if alt_name not in taken:
+                alt_match = TraitMatch(icon_name=alt_name, confidence=alt_score,
+                                       bbox=loser.match.bbox)
+                result[loser_idx] = alt_match
+                taken[alt_name] = loser_idx
+                reassigned = True
+                break
+        if not reassigned:
+            result[loser_idx] = None  # type: ignore
+
+    return [m for m in result if m is not None]
+
+
 def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
-                    expected_icon_size: int = 64) -> list[TraitMatch]:
+                    expected_icon_size: int | None = None) -> list[TraitMatch]:
     """Extract and match all icons in a trait row image.
 
     Uses spatial zone assignment (shield → diamond → hex left-to-right) to
@@ -264,6 +309,8 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
     Falls back to z-score comparison when no spatial anchors are available.
     Deduplicates by icon_name.
     """
+    if expected_icon_size is None:
+        expected_icon_size = trait_row.shape[0]
     icons = segment_icons(trait_row, expected_size=expected_icon_size)
     shaped = split_atlas_by_shape(atlas)
     thresholds = {
@@ -273,7 +320,13 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
     }
     zones = _assign_zones(icons)
 
-    matches: list[TraitMatch] = []
+    @dataclass
+    class _Candidate:
+        match: TraitMatch
+        ranked: list[tuple[str, float]]
+        threshold: float
+
+    candidates: list[_Candidate] = []
     for (icon_img, x, y), zone in zip(icons, zones):
         color, _ = _classify_border_color(icon_img)
 
@@ -287,12 +340,13 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
             sr = _match_icon_scored(icon_img, subset)
             if sr and sr.match.confidence >= threshold:
                 sr.match.bbox = (x, y, icon_img.shape[1], icon_img.shape[0])
-                matches.append(sr.match)
+                candidates.append(_Candidate(match=sr.match, ranked=sr.ranked, threshold=threshold))
             continue
 
         icon_crop = _crop_interior(icon_img)
-        best_for_icon: TraitMatch | None = None
-        best_score = -1.0
+        best_sr: _SubsetResult | None = None
+        best_z = -1.0
+        best_threshold = 0.0
         for shape_key, threshold in thresholds.items():
             subset = shaped.cropped[shape_key]
             if not subset:
@@ -300,16 +354,12 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
             sr = _match_icon_scored(icon_crop, subset)
             if sr is None or sr.match.confidence < threshold:
                 continue
-            sr.match.bbox = (x, y, icon_img.shape[1], icon_img.shape[0])
-            if sr.z_score > best_score:
-                best_score = sr.z_score
-                best_for_icon = sr.match
-        if best_for_icon is not None:
-            matches.append(best_for_icon)
+            if sr.z_score > best_z:
+                best_z = sr.z_score
+                best_sr = sr
+                best_threshold = threshold
+        if best_sr is not None:
+            best_sr.match.bbox = (x, y, icon_img.shape[1], icon_img.shape[0])
+            candidates.append(_Candidate(match=best_sr.match, ranked=best_sr.ranked, threshold=best_threshold))
 
-    best: dict[str, TraitMatch] = {}
-    for m in matches:
-        prev = best.get(m.icon_name)
-        if prev is None or m.confidence > prev.confidence:
-            best[m.icon_name] = m
-    return list(best.values())
+    return _dedup_matches(candidates)
