@@ -37,10 +37,14 @@ function normalizeStatus(raw: string | null | undefined): StatusType {
 
 function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
   const rawTraits = raw.traits ?? []
-  const traits: TraitMatch[] = rawTraits.map(t => {
+  const seen = new Set<string>()
+  const traits: TraitMatch[] = []
+  for (const t of rawTraits) {
+    if (seen.has(t.icon_name)) continue
+    seen.add(t.icon_name)
     const info = getBestTrait(t.icon_name)
     const tierInfo = getTierForIcon(t.icon_name) ?? (info?.name ? getTierForName(info.name) : null)
-    return {
+    traits.push({
       icon_name: t.icon_name,
       confidence: t.confidence,
       id: info?.id ?? t.icon_name,
@@ -51,8 +55,8 @@ function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
       tier: tierInfo?.tier ?? null,
       tier_tags: tierInfo?.tags,
       tier_note: tierInfo?.note,
-    }
-  })
+    })
+  }
   const name = String(raw.name ?? '')
   return {
     id: name ? name.toLowerCase().replace(/[^a-z0-9]+/g, '_') : `tm_${Date.now()}`,
