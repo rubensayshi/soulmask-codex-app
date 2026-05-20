@@ -28,6 +28,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showLog, setShowLog] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const store = useRosterStore()
   const rosterData = store.tribesmen.length > 0 ? store.tribesmen : (import.meta.env.DEV && !store.initialized ? MOCK_ROSTER : [])
@@ -82,38 +83,56 @@ function App() {
   )
 
   async function handleExport() {
-    const path = await save({
-      defaultPath: 'roster.json',
-      filters: [{ name: 'JSON', extensions: ['json'] }],
-    })
-    if (!path) return
     const data = { last_updated: store.lastUpdated ?? new Date().toISOString(), tribesmen: store.tribesmen }
-    try {
-      await writeTextFile(path, JSON.stringify(data, null, 2))
-    } catch (e) {
-      alert(`Export failed: ${e}`)
+    const json = JSON.stringify(data, null, 2)
+    if ('__TAURI_INTERNALS__' in window) {
+      try {
+        const path = await save({ defaultPath: 'roster.json', filters: [{ name: 'JSON', extensions: ['json'] }] })
+        if (!path) return
+        await writeTextFile(path, json)
+      } catch (e) { alert(`Export failed: ${e}`) }
+    } else {
+      const blob = new Blob([json], { type: 'application/json' })
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = 'roster.json'
+      a.click()
+      URL.revokeObjectURL(a.href)
     }
   }
 
-  async function handleImport() {
-    const path = await open({
-      filters: [{ name: 'JSON', extensions: ['json'] }],
-      multiple: false,
-    })
-    if (!path) return
-    try {
-      const text = await readTextFile(path)
-      const data = JSON.parse(text)
-      if (data.tribesmen && Array.isArray(data.tribesmen)) {
-        store.loadRoster({ last_updated: data.last_updated ?? new Date().toISOString(), tribesmen: data.tribesmen })
-      }
-    } catch (e) {
-      alert(`Import failed: ${e}`)
+  function loadRosterFromText(text: string) {
+    const data = JSON.parse(text)
+    if (data.tribesmen && Array.isArray(data.tribesmen)) {
+      store.loadRoster({ last_updated: data.last_updated ?? new Date().toISOString(), tribesmen: data.tribesmen })
     }
+  }
+
+  function handleImport() {
+    if ('__TAURI_INTERNALS__' in window) {
+      open({ filters: [{ name: 'JSON', extensions: ['json'] }], multiple: false })
+        .then(path => { if (path) return readTextFile(path).then(loadRosterFromText) })
+        .catch(e => alert(`Import failed: ${e}`))
+      return
+    }
+    fileInputRef.current?.click()
+  }
+
+  function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try { loadRosterFromText(reader.result as string) }
+      catch (err) { alert(`Import failed: ${err}`) }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
   }
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
+      <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={onFileSelected} />
       {/* Title bar */}
       <div
         className="flex items-center"
