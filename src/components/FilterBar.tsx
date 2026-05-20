@@ -44,7 +44,10 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
   const visibleTraits = useMemo(() => {
     if (!tierFilter) return allTraits
     const threshold = TIER_ORDER[tierFilter] ?? 99
-    return allTraits.filter(t => t.tier && (TIER_ORDER[t.tier] ?? 99) <= threshold)
+    return allTraits.filter(t => {
+      const effective = TIER_ORDER[t.tier ?? 'C'] ?? 3
+      return effective <= threshold
+    })
   }, [allTraits, tierFilter])
 
   function toggleGroup(id: string) {
@@ -166,40 +169,57 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
         Any
       </Chip>
 
-      {TIER_LIST.map(tier => {
-        const on = tierFilter === tier
-        const tc = TIER_COLORS[tier]
-        return (
-          <Chip key={tier} on={on} onClick={() => setTierFilter(on ? null : tier)}
-            style={on ? { color: tc.text, borderColor: tc.bg, background: tc.bg } : {}}>
-            {tier}+
-          </Chip>
-        )
-      })}
-
-      <span style={{ width: 1, height: 16, background: 'var(--color-border)', margin: '0 4px' }} />
-
-      {visibleTraits.map(({ id, name, tier }) => {
-        const on = filters.traits.includes(id)
-        const tc = tier ? TIER_COLORS[tier] : null
-        return (
-          <Chip key={id} on={on} onClick={() => toggleTrait(id)}>
-            {name}
-            {tc && (
-              <span style={{
-                fontSize: 8,
+      <span className="inline-flex items-center" style={{ gap: 2, marginRight: 6 }}>
+        {TIER_LIST.map(tier => {
+          const on = tierFilter === tier
+          const tc = TIER_COLORS[tier]
+          return (
+            <button
+              key={tier}
+              onClick={() => setTierFilter(on ? null : tier)}
+              className="transition-all duration-100"
+              style={{
+                width: 22, height: 20,
+                borderRadius: 3,
+                border: `1.5px solid ${on ? tc.bg : 'transparent'}`,
+                background: on ? tc.bg : `color-mix(in oklch, ${tc.bg} 20%, transparent)`,
+                color: on ? tc.text : tc.bg,
+                fontSize: 10,
                 fontWeight: 700,
                 fontFamily: 'var(--font-mono)',
                 lineHeight: 1,
-                padding: '1px 3px',
-                borderRadius: 3,
-                background: tc.bg,
-                color: tc.text,
-                marginLeft: 2,
-              }}>
-                {tier}
-              </span>
-            )}
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: on ? 1 : 0.7,
+              }}
+            >
+              {tier}
+            </button>
+          )
+        })}
+      </span>
+
+      {visibleTraits.map(({ id, name, tier }) => {
+        const on = filters.traits.includes(id)
+        const effectiveTier = tier ?? 'C' as Tier
+        const tc = TIER_COLORS[effectiveTier]
+        return (
+          <Chip key={id} on={on} onClick={() => toggleTrait(id)}>
+            {name}
+            <span style={{
+              fontSize: 8,
+              fontWeight: 700,
+              fontFamily: 'var(--font-mono)',
+              lineHeight: 1,
+              padding: '1px 3px',
+              borderRadius: 3,
+              background: tc.bg,
+              color: tc.text,
+              marginLeft: 2,
+            }}>
+              {effectiveTier}
+            </span>
           </Chip>
         )
       })}
