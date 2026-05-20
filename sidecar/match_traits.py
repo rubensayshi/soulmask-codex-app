@@ -94,85 +94,100 @@ def split_atlas_by_shape(atlas: dict[str, np.ndarray]) -> ShapedAtlas:
     return ShapedAtlas(full=full, cropped=cropped)
 
 
-def segment_icons(trait_row: np.ndarray, expected_size: int = 64) -> list[tuple[np.ndarray, int, int]]:
-    """Segment individual icons from the trait icon row.
+MAX_TRAIT_SLOTS = 16
 
-    Uses multiple binary thresholds to handle varying background brightness
-    (game world bleeds through semi-transparent card UI), then deduplicates
-    overlapping detections via NMS-style merging.
-    """
-    gray = cv2.cvtColor(trait_row, cv2.COLOR_BGR2GRAY) if len(trait_row.shape) == 3 else trait_row
+
+def _find_grid_anchors(gray: np.ndarray) -> list[tuple[int, int, int]]:
+    """Find a few bright icons to establish grid pitch and y-center."""
     h, w = gray.shape
-    min_side = max(int(expected_size * 0.4), 16)
-    max_side = int(expected_size * 2.0)
-
+    min_side = min(max(int(h * 0.35), 16), 28)
+    max_side = min(int(h * 1.5), 60)
     candidates: list[tuple[int, int, int]] = []
-
-    def _collect(binary: np.ndarray) -> None:
+    for thresh in range(25, 90, 15):
+        _, binary = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for cnt in contours:
             bx, by, bw, bh = cv2.boundingRect(cnt)
             if bw < min_side or bh < min_side or bw > max_side or bh > max_side:
                 continue
-            aspect = max(bw, bh) / min(bw, bh) if min(bw, bh) > 0 else 99
-            if aspect > 1.8:
+            if max(bw, bh) / max(min(bw, bh), 1) > 1.8:
                 continue
             side = max(bw, bh)
-            cx, cy = bx + bw // 2, by + bh // 2
-            candidates.append((cx, cy, side))
-
-    for thresh in range(20, 120, 10):
-        _, binary = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)
-        _collect(binary)
-
-    for block in [15, 21]:
-        binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
-                                       cv2.THRESH_BINARY, block, -3)
-        _collect(binary)
-
+            candidates.append((bx + bw // 2, by + bh // 2, side))
     if not candidates:
         return []
-
     candidates.sort(key=lambda c: c[0])
     merged: list[tuple[int, int, int]] = []
     used = [False] * len(candidates)
-    for i, (cx, cy, side) in enumerate(candidates):
+    for i, (cx, cy, s) in enumerate(candidates):
         if used[i]:
             continue
-        group_cx, group_cy, group_side = [cx], [cy], [side]
+        grp_cx, grp_cy, grp_s = [cx], [cy], [s]
         used[i] = True
         for j in range(i + 1, len(candidates)):
             if used[j]:
                 continue
-            cx2, cy2, side2 = candidates[j]
-            if abs(cx2 - cx) < side * 0.4 and abs(cy2 - cy) < side * 0.4:
-                group_cx.append(cx2)
-                group_cy.append(cy2)
-                group_side.append(side2)
+            if abs(candidates[j][0] - cx) < s * 0.5 and abs(candidates[j][1] - cy) < s * 0.5:
+                grp_cx.append(candidates[j][0])
+                grp_cy.append(candidates[j][1])
+                grp_s.append(candidates[j][2])
                 used[j] = True
-        merged.append((
-            int(np.mean(group_cx)),
-            int(np.mean(group_cy)),
-            int(np.median(group_side)),
-        ))
-
+        merged.append((int(np.mean(grp_cx)), int(np.mean(grp_cy)), int(np.median(grp_s))))
     if len(merged) >= 3:
-        sides = sorted([s for _, _, s in merged])
-        median_side = sides[len(sides) // 2]
-        lo, hi = median_side * 0.5, median_side * 1.6
-        merged = [(cx, cy, s) for cx, cy, s in merged if lo <= s <= hi]
+        sizes = sorted(m[2] for m in merged)
+        med = sizes[len(sizes) // 2]
+        merged = [m for m in merged if med * 0.5 <= m[2] <= med * 1.6]
+    return merged
 
+
+def segment_icons(trait_row: np.ndarray, expected_size: int = 64) -> list[tuple[np.ndarray, int, int]]:
+    """Slice 16 fixed-pitch boxes from the trait icon row.
+
+    Detects a few bright anchor icons to establish grid pitch and vertical
+    center, then extrapolates all 16 possible slot positions. Faster and
+    more reliable than threshold-based contour detection — faint icons
+    that contour detection misses get sliced at their expected position.
+    """
+    gray = cv2.cvtColor(trait_row, cv2.COLOR_BGR2GRAY) if len(trait_row.shape) == 3 else trait_row
+    h, w = gray.shape
+    anchors = _find_grid_anchors(gray)
+    if not anchors:
+        return []
+
+    sizes = [s for _, _, s in anchors]
+    icon_size = int(np.median(sizes))
+    cy_med = int(np.median([cy for _, cy, _ in anchors]))
+
+    xs = sorted(a[0] for a in anchors)
+    if len(xs) >= 2:
+        pitches = [xs[i + 1] - xs[i] for i in range(len(xs) - 1)]
+        pitch = int(np.median(pitches))
+    else:
+        pitch = int(icon_size * 1.08)
+    pitch = max(pitch, icon_size + 1)
+
+    first_cx = xs[0]
+
+    half = icon_size // 2
     icons: list[tuple[np.ndarray, int, int]] = []
-    for cx, cy, side in merged:
-        x1 = max(0, cx - side // 2)
-        y1 = max(0, cy - side // 2)
-        x2 = min(w, x1 + side)
-        y2 = min(h, y1 + side)
+    for slot in range(MAX_TRAIT_SLOTS):
+        cx = first_cx + slot * pitch
+        x1 = cx - half
+        x2 = x1 + icon_size
+        if x2 > w:
+            break
+        if x1 < 0:
+            continue
+        y1 = max(0, cy_med - half)
+        y2 = min(h, y1 + icon_size)
         crop = trait_row[y1:y2, x1:x2]
-        if crop.size > 0:
-            icons.append((crop, x1, y1))
+        if crop.size == 0:
+            continue
+        slot_gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if len(crop.shape) == 3 else crop
+        if int(slot_gray.max()) < 80:
+            continue
+        icons.append((crop, x1, y1))
 
-    icons.sort(key=lambda t: t[1])
     return icons
 
 
