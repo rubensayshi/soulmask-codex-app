@@ -78,6 +78,10 @@ cd src-tauri && cargo build
 - **Feature flags**: `ENABLE_PROFICIENCIES` in `data.ts` gates the proficiency columns (currently `false`)
 - **Worktree dev ports**: `scripts/dev-port.cjs` hashes the repo path to derive a unique Vite port per worktree (main repo = 1420, worktrees = 1100-1999). `pnpm dev` picks this up automatically; for Tauri use `pnpm tauri:dev` which passes the matching `devUrl` override
 
+## Related projects
+
+- **souldb** (`/Users/ruben/work/private/souldb`) — Soulmask webapp with comprehensive game data: traits (1,300+ with English translations, star levels, effects, community tier rankings), items, recipes, tech tree, creature spawns. SQLite database at `data/app.db`, translations at `data/translations/`. This repo's `assets/traits.json` was enriched from souldb's trait data. Useful for looking up game mechanics, adding new data fields, or cross-referencing OCR output.
+
 ## Styling
 
 Dark fantasy/cartography theme using oklch color space. Design tokens in `src/styles.css` under `@theme`. Fonts: Cormorant Garamond (headings), Manrope (body), IBM Plex Mono (code/data). Per-clan accent colors via `--color-hue-{clan}` CSS vars.

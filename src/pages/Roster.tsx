@@ -353,9 +353,7 @@ export function sortRows(rows: Tribesman[], sort: SortState): Tribesman[] {
   })
 }
 
-const TIER_ORDER: Record<string, number> = { S: 0, A: 1, B: 2, C: 3, D: 4, F: 5 }
-
-export function filterRows(rows: Tribesman[], filters: { clan: string; groups: string[]; traits: string[]; minLevel: number | null; minTier: string | null; prof: { skill: number; min: number } | null }, query: string): Tribesman[] {
+export function filterRows(rows: Tribesman[], filters: { clan: string; groups: string[]; traits: string[]; minLevel: number | null; prof: { skill: number; min: number } | null }, query: string): Tribesman[] {
   return rows.filter(r => {
     if (filters.clan !== 'all' && r.clan !== filters.clan) return false
     if (filters.groups.length > 0 && !filters.groups.includes(r.group)) return false
@@ -363,10 +361,6 @@ export function filterRows(rows: Tribesman[], filters: { clan: string; groups: s
     if (filters.traits.length > 0) {
       const traitIds = new Set(r.traits.map(t => t.id))
       if (!filters.traits.every(id => traitIds.has(id))) return false
-    }
-    if (filters.minTier !== null) {
-      const threshold = TIER_ORDER[filters.minTier] ?? 99
-      if (!r.traits.some(t => t.tier && (TIER_ORDER[t.tier] ?? 99) <= threshold)) return false
     }
     if (filters.prof !== null && (r.prof[filters.prof.skill] ?? 0) < filters.prof.min) return false
     if (query) {

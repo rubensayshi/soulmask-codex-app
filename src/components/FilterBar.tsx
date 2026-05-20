@@ -1,13 +1,11 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { CLANS, PROF_SKILLS, ENABLE_PROFICIENCIES } from '../lib/data'
+import { TIER_COLORS } from './TraitBadge'
 import type { Filters, ClanName, Tribesman, Tier } from '../lib/types'
 
 const CLAN_LIST: ClanName[] = ['Claw', 'Flint', 'Fang', 'Wolf', 'Horn', 'Exile', 'DLC']
 const TIER_LIST: Tier[] = ['S', 'A', 'B', 'C']
-const TIER_HUE: Record<Tier, string> = {
-  S: 'var(--color-gold)', A: 'oklch(0.72 0.14 145)', B: 'oklch(0.65 0.10 230)',
-  C: 'oklch(0.58 0.06 80)', D: 'oklch(0.50 0.03 130)', F: 'oklch(0.42 0.02 130)',
-}
+const TIER_ORDER: Record<string, number> = { S: 0, A: 1, B: 2, C: 3, D: 4, F: 5 }
 
 interface Props {
   filters: Filters
@@ -16,6 +14,8 @@ interface Props {
 }
 
 export function FilterBar({ filters, setFilters, roster }: Props) {
+  const [tierFilter, setTierFilter] = useState<Tier | null>(null)
+
   const allGroups = useMemo(() => {
     const seen = new Set<string>()
     for (const tm of roster) {
@@ -24,15 +24,28 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
     return Array.from(seen).sort((a, b) => a.localeCompare(b))
   }, [roster])
 
-  const allTraitNames = useMemo(() => {
-    const seen = new Map<string, string>()
+  const allTraits = useMemo(() => {
+    const seen = new Map<string, { name: string; tier: Tier | null }>()
     for (const tm of roster) {
       for (const t of tm.traits) {
-        if (!seen.has(t.id)) seen.set(t.id, t.name)
+        const existing = seen.get(t.id)
+        if (!existing) {
+          seen.set(t.id, { name: t.name, tier: (t.tier as Tier) ?? null })
+        } else if (t.tier && (!existing.tier || (TIER_ORDER[t.tier] ?? 99) < (TIER_ORDER[existing.tier] ?? 99))) {
+          existing.tier = t.tier as Tier
+        }
       }
     }
-    return Array.from(seen.entries()).sort((a, b) => a[1].localeCompare(b[1]))
+    return Array.from(seen.entries())
+      .map(([id, info]) => ({ id, ...info }))
+      .sort((a, b) => a.name.localeCompare(b.name))
   }, [roster])
+
+  const visibleTraits = useMemo(() => {
+    if (!tierFilter) return allTraits
+    const threshold = TIER_ORDER[tierFilter] ?? 99
+    return allTraits.filter(t => t.tier && (TIER_ORDER[t.tier] ?? 99) <= threshold)
+  }, [allTraits, tierFilter])
 
   function toggleGroup(id: string) {
     const cur = filters.groups
@@ -145,18 +158,48 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
 
       <span style={{ flexBasis: '100%', height: 0 }} />
 
-      {/* Traits */}
+      {/* Traits + tier filter */}
       <span className="uppercase" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '0.1em', marginRight: 4 }}>
         Traits
       </span>
-      <Chip on={filters.traits.length === 0} onClick={() => setFilters({ ...filters, traits: [] })}>
+      <Chip on={filters.traits.length === 0 && tierFilter === null} onClick={() => { setFilters({ ...filters, traits: [] }); setTierFilter(null) }}>
         Any
       </Chip>
-      {allTraitNames.map(([id, name]) => {
+
+      {TIER_LIST.map(tier => {
+        const on = tierFilter === tier
+        const tc = TIER_COLORS[tier]
+        return (
+          <Chip key={tier} on={on} onClick={() => setTierFilter(on ? null : tier)}
+            style={on ? { color: tc.text, borderColor: tc.bg, background: tc.bg } : {}}>
+            {tier}+
+          </Chip>
+        )
+      })}
+
+      <span style={{ width: 1, height: 16, background: 'var(--color-border)', margin: '0 4px' }} />
+
+      {visibleTraits.map(({ id, name, tier }) => {
         const on = filters.traits.includes(id)
+        const tc = tier ? TIER_COLORS[tier] : null
         return (
           <Chip key={id} on={on} onClick={() => toggleTrait(id)}>
             {name}
+            {tc && (
+              <span style={{
+                fontSize: 8,
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono)',
+                lineHeight: 1,
+                padding: '1px 3px',
+                borderRadius: 3,
+                background: tc.bg,
+                color: tc.text,
+                marginLeft: 2,
+              }}>
+                {tier}
+              </span>
+            )}
           </Chip>
         )
       })}
@@ -165,26 +208,6 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
           · {filters.traits.length} selected (AND)
         </span>
       )}
-
-      <span style={{ width: 14 }} />
-
-      {/* Tier */}
-      <span className="uppercase" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '0.1em', marginRight: 4 }}>
-        Tier
-      </span>
-      <Chip on={filters.minTier === null} onClick={() => setFilters({ ...filters, minTier: null })}>
-        Any
-      </Chip>
-      {TIER_LIST.map(tier => {
-        const on = filters.minTier === tier
-        const hue = TIER_HUE[tier]
-        return (
-          <Chip key={tier} on={on} onClick={() => setFilters({ ...filters, minTier: on ? null : tier })}
-            style={on ? { color: hue, borderColor: hue } : {}}>
-            {tier}+
-          </Chip>
-        )
-      })}
 
       {ENABLE_PROFICIENCIES && <>
       <span style={{ flexBasis: '100%', height: 0 }} />
