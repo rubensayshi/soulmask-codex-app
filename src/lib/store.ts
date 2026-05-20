@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Tribesman, ProcessResult, TraitMatch, ClanName, StatusType } from './types'
 import { getBestTrait, getTierForIcon, getTierForName } from './traits'
+import { normalizeTitle, normalizeClass, normalizeGroup, deduplicateGroups } from './fuzzy'
 
 // ── Sidecar output shape (class instead of klass, group/status as strings, no id/prof) ──
 interface RawTribesman {
@@ -62,10 +63,10 @@ function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
     id: name ? name.toLowerCase().replace(/[^a-z0-9]+/g, '_') : `tm_${Date.now()}`,
     name,
     level: raw.level ?? 0,
-    klass: String(raw.class ?? raw.klass ?? ''),
+    klass: normalizeClass(raw.class ?? raw.klass),
     clan: normalizeClan(raw.clan),
-    group: raw.group ?? 'unassigned',
-    title: raw.title ?? '—',
+    group: normalizeGroup(raw.group),
+    title: normalizeTitle(raw.title),
     location: raw.location ?? '',
     status: normalizeStatus(raw.status),
     traits,
@@ -137,6 +138,13 @@ export const useRosterStore = create<RosterState>((set) => ({
       const raw = t as RawTribesman & { id?: string; star?: number }
       return normalizeTribesman(raw, (raw as { captured_at?: string }).captured_at ?? now)
     })
+    const groupRemap = deduplicateGroups(tribesmen)
+    if (groupRemap.size > 0) {
+      for (const t of tribesmen) {
+        const mapped = groupRemap.get(t.group)
+        if (mapped) t.group = mapped
+      }
+    }
     return set({ tribesmen, lastUpdated: roster.last_updated, initialized: true })
   },
 
@@ -186,6 +194,13 @@ export const useRosterStore = create<RosterState>((set) => ({
         const idx = merged.findIndex(m => m.name === t.name)
         if (idx >= 0) merged[idx] = t
         else merged.push(t)
+      }
+      const groupRemap = deduplicateGroups(merged)
+      if (groupRemap.size > 0) {
+        for (const t of merged) {
+          const mapped = groupRemap.get(t.group)
+          if (mapped) t.group = mapped
+        }
       }
       const names = incoming.map(t => t.name).join(', ')
       return {
