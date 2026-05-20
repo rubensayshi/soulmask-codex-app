@@ -40,7 +40,7 @@ export function buildTraitPool(
       if (keptTraitIds.has(t.id)) continue
       if (clanExclusiveIds) {
         const requiredClan = clanExclusiveIds.get(t.id)
-        if (requiredClan && requiredClan !== traineeClan) continue
+        if (requiredClan && requiredClan !== traineeClan.toLowerCase()) continue
       }
       const existing = pool.get(t.id)
       if (existing) {

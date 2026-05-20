@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import type { SlotState, TraitMatch, Tribesman } from '../lib/types'
 import { buildSlots, buildSlotsFromDesired, buildTraitPool, type PlannerMode } from '../lib/planner'
+import { clanExclusiveIds } from '../lib/traits'
 import { TraineePanel } from '../components/TraineePanel'
 import { TraitPicker } from '../components/TraitPicker'
 import { MentorPanel } from '../components/MentorPanel'
@@ -101,7 +102,7 @@ export function TrainingPlanner({ roster }: { roster: Tribesman[] }) {
   )
 
   const pool = useMemo(
-    () => buildTraitPool(roster, trainee?.clan ?? '', keptTraitIds),
+    () => buildTraitPool(roster, trainee?.clan ?? '', keptTraitIds, clanExclusiveIds),
     [roster, trainee?.clan, keptTraitIds],
   )
 

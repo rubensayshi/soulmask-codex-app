@@ -24,6 +24,13 @@ export function getBestTrait(iconName: string): TraitInfo | null {
 
 export { traitsArray }
 
+export const clanExclusiveIds: Map<string, string> = new Map()
+for (const t of traitsArray) {
+  if (t.clan && t.source === 'Normal') {
+    clanExclusiveIds.set(t.id, t.clan.toLowerCase())
+  }
+}
+
 // ── Tier rankings lookup ──
 
 interface RankingEntry { tier: string; tags: string[]; note: string }
