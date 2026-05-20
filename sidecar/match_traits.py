@@ -13,6 +13,54 @@ class TraitMatch:
 
 
 CONFIDENCE_THRESHOLD = 0.62
+NONHEX_CONFIDENCE_THRESHOLD = 0.55
+_COLOR_TO_SHAPE = {"green": "hexagon", "gold": "shield", "purple": "diamond"}
+
+
+def _icon_shape(name: str) -> str:
+    if name.startswith("Icon_NG_XiHao") or name.startswith("Icon_NG_XingGe"):
+        return "diamond"
+    if name.startswith("Icon_NG_BuLuo") or name.startswith("ChengHao") or name.startswith("Icon_NG_JingLi"):
+        return "shield"
+    return "hexagon"
+
+
+def _classify_border_color(icon_bgr: np.ndarray) -> tuple[str, float]:
+    """Classify an icon's border color to determine trait shape.
+
+    Returns (color, saturation) where color is 'green' (hex), 'gold' (shield),
+    'purple' (diamond), 'red' (negative/any shape), or 'unknown'.
+    """
+    h_px, w_px = icon_bgr.shape[:2]
+    hsv = cv2.cvtColor(icon_bgr, cv2.COLOR_BGR2HSV)
+    border = int(max(2, min(h_px, w_px) * 0.25))
+    mask = np.zeros((h_px, w_px), dtype=np.uint8)
+    cv2.rectangle(mask, (0, 0), (w_px - 1, h_px - 1), 255, border)
+    bright = (mask > 0) & (hsv[:, :, 2] > 40)
+    if bright.sum() < 10:
+        return "unknown", 0.0
+    hues = hsv[:, :, 0][bright]
+    sats = hsv[:, :, 1][bright]
+    h_med = float(np.median(hues))
+    s_med = float(np.median(sats))
+    if s_med < 20:
+        return "unknown", s_med
+    if (h_med < 8 or h_med > 168) and s_med > 60:
+        return "red", s_med
+    if 8 <= h_med < 30:
+        return "gold", s_med
+    if 30 <= h_med < 95:
+        return "green", s_med
+    if 95 <= h_med < 160:
+        return "purple", s_med
+    return "unknown", s_med
+
+
+def _crop_interior(img: np.ndarray, margin_frac: float = 0.20) -> np.ndarray:
+    """Crop the interior of an icon, removing the border ring."""
+    h, w = img.shape[:2]
+    m = int(min(h, w) * margin_frac)
+    return img[m:h - m, m:w - m]
 
 
 def load_atlas(atlas_dir: str, size: int | None = None) -> dict[str, np.ndarray]:
@@ -28,6 +76,22 @@ def load_atlas(atlas_dir: str, size: int | None = None) -> dict[str, np.ndarray]
             img = cv2.resize(img, (size, size))
         atlas[name] = img
     return atlas
+
+
+@dataclass
+class ShapedAtlas:
+    full: dict[str, dict[str, np.ndarray]]
+    cropped: dict[str, dict[str, np.ndarray]]
+
+
+def split_atlas_by_shape(atlas: dict[str, np.ndarray]) -> ShapedAtlas:
+    full: dict[str, dict[str, np.ndarray]] = {"hexagon": {}, "diamond": {}, "shield": {}}
+    cropped: dict[str, dict[str, np.ndarray]] = {"hexagon": {}, "diamond": {}, "shield": {}}
+    for name, img in atlas.items():
+        shape = _icon_shape(name)
+        full[shape][name] = img
+        cropped[shape][name] = _crop_interior(img)
+    return ShapedAtlas(full=full, cropped=cropped)
 
 
 def segment_icons(trait_row: np.ndarray, expected_size: int = 64) -> list[tuple[np.ndarray, int, int]]:
@@ -122,16 +186,130 @@ def match_icon(icon_img: np.ndarray, atlas: dict[str, np.ndarray]) -> TraitMatch
     return TraitMatch(icon_name=best_name, confidence=best_score, bbox=(0, 0, 0, 0))
 
 
+@dataclass
+class _SubsetResult:
+    match: TraitMatch
+    z_score: float
+
+
+def _match_icon_scored(icon_img: np.ndarray, atlas: dict[str, np.ndarray]) -> _SubsetResult | None:
+    """Match icon against atlas subset and return z-score of best match."""
+    if not atlas:
+        return None
+    target_size = next(iter(atlas.values())).shape[0]
+    if icon_img.shape[0] != target_size or icon_img.shape[1] != target_size:
+        icon_img = cv2.resize(icon_img, (target_size, target_size))
+
+    scores: list[float] = []
+    best_name = ""
+    best_score = -1.0
+    for name, ref in atlas.items():
+        result = cv2.matchTemplate(icon_img, ref, cv2.TM_CCORR_NORMED)
+        s = float(result[0][0])
+        scores.append(s)
+        if s > best_score:
+            best_score = s
+            best_name = name
+
+    arr = np.array(scores)
+    mean = float(arr.mean())
+    std = float(arr.std())
+    z = (best_score - mean) / std if std > 1e-6 else 0.0
+    n = len(scores)
+    expected_max = float(np.sqrt(2.0 * np.log(max(n, 2))))
+    z_norm = z / expected_max if expected_max > 0 else z
+    m = TraitMatch(icon_name=best_name, confidence=best_score, bbox=(0, 0, 0, 0))
+    return _SubsetResult(match=m, z_score=z_norm)
+
+
+def _assign_zones(icons: list[tuple[np.ndarray, int, int]]) -> list[str]:
+    """Assign shape zones using spatial ordering (shield → diamond → hex).
+
+    Game arranges icons left-to-right: shields, then diamonds, then hexes.
+    Uses green/purple color anchors to find zone boundaries. Requires at
+    least one green or purple anchor to define any boundary; gold-only cards
+    fall back to 'unknown' for z-score matching.
+    """
+    colors = [_classify_border_color(img)[0] for img, _, _ in icons]
+    xs = [x for _, x, _ in icons]
+    n = len(icons)
+    if n == 0:
+        return []
+
+    first_green = next((xs[i] for i in range(n) if colors[i] == "green"), None)
+    first_purple = next((xs[i] for i in range(n) if colors[i] == "purple"), None)
+
+    has_boundary = first_green is not None or first_purple is not None
+    if not has_boundary:
+        return ["unknown"] * n
+
+    zones: list[str] = []
+    for i in range(n):
+        x = xs[i]
+        if first_green is not None and x >= first_green:
+            zones.append("hexagon")
+        elif first_purple is not None and x >= first_purple:
+            zones.append("diamond")
+        else:
+            zones.append("shield")
+    return zones
+
+
 def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
                     expected_icon_size: int = 64) -> list[TraitMatch]:
-    """Extract and match all icons in a trait row image."""
+    """Extract and match all icons in a trait row image.
+
+    Uses spatial zone assignment (shield → diamond → hex left-to-right) to
+    determine each icon's shape, then matches against that subset only.
+    Falls back to z-score comparison when no spatial anchors are available.
+    Deduplicates by icon_name.
+    """
     icons = segment_icons(trait_row, expected_size=expected_icon_size)
+    shaped = split_atlas_by_shape(atlas)
+    thresholds = {
+        "hexagon": CONFIDENCE_THRESHOLD,
+        "diamond": NONHEX_CONFIDENCE_THRESHOLD,
+        "shield": NONHEX_CONFIDENCE_THRESHOLD,
+    }
+    zones = _assign_zones(icons)
 
-    matches = []
-    for icon_img, x, y in icons:
-        m = match_icon(icon_img, atlas)
-        m.bbox = (x, y, icon_img.shape[1], icon_img.shape[0])
-        if m.confidence >= CONFIDENCE_THRESHOLD:
-            matches.append(m)
+    matches: list[TraitMatch] = []
+    for (icon_img, x, y), zone in zip(icons, zones):
+        color, _ = _classify_border_color(icon_img)
 
-    return matches
+        if zone != "unknown":
+            if color in ("green", "purple", "gold"):
+                subset = shaped.full[zone]
+            else:
+                subset = shaped.cropped[zone]
+                icon_img = _crop_interior(icon_img)
+            threshold = thresholds[zone]
+            sr = _match_icon_scored(icon_img, subset)
+            if sr and sr.match.confidence >= threshold:
+                sr.match.bbox = (x, y, icon_img.shape[1], icon_img.shape[0])
+                matches.append(sr.match)
+            continue
+
+        icon_crop = _crop_interior(icon_img)
+        best_for_icon: TraitMatch | None = None
+        best_score = -1.0
+        for shape_key, threshold in thresholds.items():
+            subset = shaped.cropped[shape_key]
+            if not subset:
+                continue
+            sr = _match_icon_scored(icon_crop, subset)
+            if sr is None or sr.match.confidence < threshold:
+                continue
+            sr.match.bbox = (x, y, icon_img.shape[1], icon_img.shape[0])
+            if sr.z_score > best_score:
+                best_score = sr.z_score
+                best_for_icon = sr.match
+        if best_for_icon is not None:
+            matches.append(best_for_icon)
+
+    best: dict[str, TraitMatch] = {}
+    for m in matches:
+        prev = best.get(m.icon_name)
+        if prev is None or m.confidence > prev.confidence:
+            best[m.icon_name] = m
+    return list(best.values())

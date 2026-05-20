@@ -39,13 +39,13 @@ function normalizeStatus(raw: string | null | undefined): StatusType {
 function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
   const rawTraits = raw.traits ?? []
   const seen = new Set<string>()
-  const traits: TraitMatch[] = []
+  const allTraits: TraitMatch[] = []
   for (const t of rawTraits) {
     if (seen.has(t.icon_name)) continue
     seen.add(t.icon_name)
     const info = getBestTrait(t.icon_name)
     const tierInfo = getTierForIcon(t.icon_name) ?? (info?.name ? getTierForName(info.name) : null)
-    traits.push({
+    allTraits.push({
       icon_name: t.icon_name,
       confidence: t.confidence,
       id: info?.id ?? t.icon_name,
@@ -58,6 +58,13 @@ function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
       tier_note: tierInfo?.note,
     })
   }
+  const MAX_HEXAGON = 6
+  const hexTraits = allTraits.filter(t => t.shape === 'hexagon')
+  const otherTraits = allTraits.filter(t => t.shape !== 'hexagon')
+  const cappedHex = hexTraits.length > MAX_HEXAGON
+    ? hexTraits.sort((a, b) => b.confidence - a.confidence).slice(0, MAX_HEXAGON)
+    : hexTraits
+  const traits = [...cappedHex, ...otherTraits]
   const name = String(raw.name ?? '')
   return {
     id: name ? name.toLowerCase().replace(/[^a-z0-9]+/g, '_') : `tm_${Date.now()}`,
