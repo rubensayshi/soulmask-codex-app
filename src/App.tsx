@@ -21,7 +21,7 @@ import './styles.css'
 function App() {
   const [layout, setLayout] = useState<LayoutMode>('table')
   const [query, setQuery] = useState('')
-  const [filters, setFilters] = useState<Filters>({ clan: 'all', groups: [], traits: [], minLevel: null, prof: null })
+  const [filters, setFilters] = useState<Filters>({ clan: 'all', groups: [], traits: [], minLevel: null, minTier: null, prof: null })
   const [sort, setSort] = useState<SortState>({ key: 'name', dir: 'asc' })
   const [screen, setScreen] = useState<'roster' | 'empty' | 'review' | 'planner'>('roster')
   const [showCapture, setShowCapture] = useState(false)

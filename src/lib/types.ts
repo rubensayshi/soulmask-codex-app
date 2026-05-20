@@ -76,6 +76,7 @@ export interface Filters {
   groups: string[]
   traits: string[]
   minLevel: number | null
+  minTier: Tier | null
   prof: ProfFilter | null
 }
 

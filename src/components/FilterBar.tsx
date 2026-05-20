@@ -1,8 +1,13 @@
 import { useMemo } from 'react'
 import { CLANS, PROF_SKILLS, ENABLE_PROFICIENCIES } from '../lib/data'
-import type { Filters, ClanName, Tribesman } from '../lib/types'
+import type { Filters, ClanName, Tribesman, Tier } from '../lib/types'
 
 const CLAN_LIST: ClanName[] = ['Claw', 'Flint', 'Fang', 'Wolf', 'Horn', 'Exile', 'DLC']
+const TIER_LIST: Tier[] = ['S', 'A', 'B', 'C']
+const TIER_HUE: Record<Tier, string> = {
+  S: 'var(--color-gold)', A: 'oklch(0.72 0.14 145)', B: 'oklch(0.65 0.10 230)',
+  C: 'oklch(0.58 0.06 80)', D: 'oklch(0.50 0.03 130)', F: 'oklch(0.42 0.02 130)',
+}
 
 interface Props {
   filters: Filters
@@ -160,6 +165,26 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
           · {filters.traits.length} selected (AND)
         </span>
       )}
+
+      <span style={{ width: 14 }} />
+
+      {/* Tier */}
+      <span className="uppercase" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '0.1em', marginRight: 4 }}>
+        Tier
+      </span>
+      <Chip on={filters.minTier === null} onClick={() => setFilters({ ...filters, minTier: null })}>
+        Any
+      </Chip>
+      {TIER_LIST.map(tier => {
+        const on = filters.minTier === tier
+        const hue = TIER_HUE[tier]
+        return (
+          <Chip key={tier} on={on} onClick={() => setFilters({ ...filters, minTier: on ? null : tier })}
+            style={on ? { color: hue, borderColor: hue } : {}}>
+            {tier}+
+          </Chip>
+        )
+      })}
 
       {ENABLE_PROFICIENCIES && <>
       <span style={{ flexBasis: '100%', height: 0 }} />
