@@ -18,6 +18,29 @@ CONFIDENCE_THRESHOLD = 0.62
 NONHEX_CONFIDENCE_THRESHOLD = 0.55
 _COLOR_TO_SHAPE = {"green": "hexagon", "gold": "shield", "purple": "diamond"}
 
+import re
+_VARIANT_SUFFIX = re.compile(r'_(\d+)$')
+
+def _normalize_icon_name(name: str) -> str:
+    """Strip atlas variant suffixes (_2, _3, …) that aren't real trait IDs."""
+    m = _VARIANT_SUFFIX.search(name)
+    if not m:
+        return name
+    base = name[:m.start()]
+    if base.startswith("tianfu_") or base.startswith("ChengHao_") or base.startswith("Icon_NG_"):
+        return base
+    return name
+
+
+def _normalize_ranked(ranked: list[tuple[str, float]]) -> list[tuple[str, float]]:
+    """Normalize icon names and dedup, keeping highest score per base name."""
+    seen: dict[str, float] = {}
+    for name, score in ranked:
+        base = _normalize_icon_name(name)
+        if base not in seen or score > seen[base]:
+            seen[base] = score
+    return sorted(seen.items(), key=lambda x: x[1], reverse=True)
+
 
 def _icon_shape(name: str) -> str:
     if name.startswith("Icon_NG_XiHao") or name.startswith("Icon_NG_XingGe"):
@@ -540,6 +563,7 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
                     ranked = _edge_rerank(ranked, orig_icon, shaped.full["hexagon"])
                 elif zone == "shield":
                     ranked = _ccoeff_rerank_shield(ranked, orig_icon, shaped.full["shield"])
+                ranked = _normalize_ranked(ranked)
                 best_name, best_score = ranked[0]
                 if color == "red":
                     best_name = shaped.neg_map.get(best_name, best_name)
@@ -577,6 +601,7 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
                 ranked = _edge_rerank(ranked, orig_icon, shaped.full["hexagon"])
             elif best_shape == "shield":
                 ranked = _ccoeff_rerank_shield(ranked, orig_icon, shaped.full["shield"])
+            ranked = _normalize_ranked(ranked)
             best_name, best_score = ranked[0]
             if color == "red":
                 best_name = shaped.neg_map.get(best_name, best_name)
