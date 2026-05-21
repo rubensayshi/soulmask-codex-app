@@ -322,27 +322,29 @@ async fn process_queue_loop(app: &AppHandle) {
 
         app.emit("capture:queued", 0usize).ok();
         app.emit("capture:status", "processing").ok();
-        app.emit("capture:progress", format!("0/{}", total)).ok();
 
-        let result = run_sidecar(&paths, app).await;
+        // Process one image at a time so we can emit incremental progress
+        // and stream partial results to the frontend as they arrive.
+        for (i, path) in paths.iter().enumerate() {
+            app.emit("capture:progress", format!("{}/{}", i, total)).ok();
+
+            match run_sidecar(std::slice::from_ref(path), app).await {
+                Ok(r) => {
+                    eprintln!("[queue] {}/{} done — {} cards, {} tribesmen", i + 1, total, r.cards_found, r.tribesmen.len());
+                    log_to_file(&format!("[queue] {}/{} done — {} cards, {} tribesmen", i + 1, total, r.cards_found, r.tribesmen.len()));
+                    app.emit("capture:result", &r).ok();
+                }
+                Err(e) => {
+                    eprintln!("[queue] {}/{} failed: {}", i + 1, total, e);
+                    log_to_file(&format!("[queue] {}/{} failed: {}", i + 1, total, e));
+                    app.emit("capture:error", e).ok();
+                }
+            }
+            // Clean up temp PNG immediately after processing.
+            let _ = std::fs::remove_file(path);
+        }
+
         app.emit("capture:progress", format!("{0}/{0}", total)).ok();
-
-        match result {
-            Ok(r) => {
-                eprintln!("[queue] done — {} cards, {} tribesmen", r.cards_found, r.tribesmen.len());
-                log_to_file(&format!("[queue] done — {} cards, {} tribesmen", r.cards_found, r.tribesmen.len()));
-                app.emit("capture:result", &r).ok();
-            }
-            Err(e) => {
-                eprintln!("[queue] processing failed: {}", e);
-                log_to_file(&format!("[queue] processing failed: {}", e));
-                app.emit("capture:error", e).ok();
-            }
-        }
-        // Clean up temp PNGs after processing.
-        for p in &paths {
-            let _ = std::fs::remove_file(p);
-        }
     }
 
     app.emit("capture:status", "idle").ok();
