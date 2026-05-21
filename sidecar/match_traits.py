@@ -37,7 +37,11 @@ def _classify_border_color(icon_bgr: np.ndarray) -> tuple[str, float]:
     border = int(max(2, min(h_px, w_px) * 0.25))
     mask = np.zeros((h_px, w_px), dtype=np.uint8)
     cv2.rectangle(mask, (0, 0), (w_px - 1, h_px - 1), 255, border)
-    bright = (mask > 0) & (hsv[:, :, 2] > 40)
+    bright = (mask > 0) & (hsv[:, :, 2] > 100)
+    if bright.sum() < 10:
+        bright = (mask > 0) & (hsv[:, :, 2] > 80)
+    if bright.sum() < 10:
+        bright = (mask > 0) & (hsv[:, :, 2] > 40)
     if bright.sum() < 10:
         return "unknown", 0.0
     hues = hsv[:, :, 0][bright]
@@ -416,6 +420,60 @@ def _edge_rerank(ranked: list[tuple[str, float]], icon_img: np.ndarray,
     return ranked
 
 
+_ORB = cv2.ORB_create(nfeatures=100, scaleFactor=1.2, edgeThreshold=5, patchSize=15)
+_ORB_BF = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+_ORB_GOOD_DIST = 50
+_ORB_RERANK_MARGIN = 0.90
+_orb_feat_cache: dict[str, tuple] = {}
+
+
+def _orb_features(name: str, img: np.ndarray) -> tuple | None:
+    if name in _orb_feat_cache:
+        return _orb_feat_cache[name]
+    g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+    kp, desc = _ORB.detectAndCompute(g, None)
+    if desc is None or len(desc) < 2:
+        _orb_feat_cache[name] = None  # type: ignore
+        return None
+    result = (kp, desc)
+    _orb_feat_cache[name] = result
+    return result
+
+
+def _orb_rerank(ranked: list[tuple[str, float]], icon_img: np.ndarray,
+                atlas_subset: dict[str, np.ndarray]) -> list[tuple[str, float]]:
+    if len(ranked) < 2:
+        return ranked
+    best_score = ranked[0][1]
+    candidates = [(n, s) for n, s in ranked if s >= best_score * _ORB_RERANK_MARGIN]
+    if len(candidates) <= 1:
+        return ranked
+    target = next(iter(atlas_subset.values())).shape[0]
+    g_icon = cv2.cvtColor(cv2.resize(icon_img, (target, target)), cv2.COLOR_BGR2GRAY)
+    kp1, d1 = _ORB.detectAndCompute(g_icon, None)
+    if d1 is None or len(d1) < 2:
+        return ranked
+    best_name, best_orb = None, -1.0
+    for name, _ in candidates:
+        ref = atlas_subset.get(name)
+        if ref is None:
+            continue
+        feat = _orb_features(name, ref)
+        if feat is None:
+            continue
+        kp2, d2 = feat
+        matches = _ORB_BF.match(d1, d2)
+        good = sum(1 for m in matches if m.distance < _ORB_GOOD_DIST)
+        score = good / max(len(kp1), len(kp2))
+        if score > best_orb:
+            best_orb = score
+            best_name = name
+    if best_name and best_name != ranked[0][0]:
+        ccorr_score = next(s for n, s in ranked if n == best_name)
+        return [(best_name, ccorr_score)] + [(n, s) for n, s in ranked if n != best_name]
+    return ranked
+
+
 def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
                     expected_icon_size: int | None = None,
                     neg_map: dict[str, str] | None = None) -> list[TraitMatch]:
@@ -452,6 +510,9 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
         if zone != "unknown":
             if color == "red" and shaped.red.get(zone):
                 subset = shaped.red[zone]
+            elif color == "green" and zone == "hexagon":
+                subset = shaped.cropped[zone]
+                icon_img = _crop_interior(icon_img)
             elif color in ("green", "purple", "gold"):
                 subset = shaped.full[zone]
             else:
@@ -461,7 +522,9 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
             sr = _match_icon_scored(icon_img, subset)
             if sr and sr.match.confidence >= threshold:
                 ranked = sr.ranked
-                if zone == "hexagon":
+                if zone == "hexagon" and color == "green":
+                    ranked = _orb_rerank(ranked, orig_icon, shaped.full["hexagon"])
+                elif zone == "hexagon":
                     ranked = _edge_rerank(ranked, orig_icon, shaped.full["hexagon"])
                 elif zone == "shield":
                     ranked = _ccoeff_rerank_shield(ranked, orig_icon, shaped.full["shield"])
