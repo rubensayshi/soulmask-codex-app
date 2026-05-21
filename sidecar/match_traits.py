@@ -86,7 +86,7 @@ def load_atlas(atlas_dir: str, size: int | None = None) -> dict[str, np.ndarray]
 def build_neg_map(traits_json_path: str) -> dict[str, str]:
     """Build mapping from positive base icon_name -> negative _2 icon_name."""
     try:
-        with open(traits_json_path) as f:
+        with open(traits_json_path, encoding='utf-8') as f:
             traits = json.load(f)
         neg = {}
         for t in traits:

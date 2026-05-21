@@ -81,7 +81,7 @@ def composite_icon(icon_path: str, shape: str, size: int) -> Image.Image:
 
 
 def build_atlas(traits_path: str, icons_dir: str, out_dir: str, size: int = 64) -> dict:
-    with open(traits_path) as f:
+    with open(traits_path, encoding='utf-8') as f:
         traits = json.load(f)
 
     icon_source = {}
