@@ -8,17 +8,18 @@ interface Props {
   desiredTraitIds: Set<string>
   focusTraitId: string | null
   traineeId: string | null
+  minMentorLevel?: number
 }
 
-export function MentorPanel({ roster, desiredTraitIds, focusTraitId, traineeId }: Props) {
+export function MentorPanel({ roster, desiredTraitIds, focusTraitId, traineeId, minMentorLevel = 50 }: Props) {
   const candidates = useMemo(
     () => roster.filter(tm => tm.id !== traineeId),
     [roster, traineeId],
   )
 
   const ranked = useMemo(
-    () => rankMentors(candidates, desiredTraitIds),
-    [candidates, desiredTraitIds],
+    () => rankMentors(candidates, desiredTraitIds, minMentorLevel),
+    [candidates, desiredTraitIds, minMentorLevel],
   )
 
   const focusName = focusTraitId
@@ -47,7 +48,9 @@ export function MentorPanel({ roster, desiredTraitIds, focusTraitId, traineeId }
 
       {desiredTraitIds.size > 0 && ranked.length === 0 && (
         <div style={{ fontSize: 12, color: 'var(--color-faint)', fontStyle: 'italic', padding: '20px 0', textAlign: 'center' }}>
-          No Lv.50+ roster members have these traits.
+          {minMentorLevel > 0
+            ? `No Lv.${minMentorLevel}+ roster members have these traits.`
+            : 'No roster members have these traits.'}
         </div>
       )}
 

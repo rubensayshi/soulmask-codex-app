@@ -15,6 +15,7 @@ export function TrainingPlanner({ roster }: { roster: Tribesman[] }) {
   const [useForgetfulness, setUseForgetfulness] = useState(false)
   const [activeSlotIdx, setActiveSlotIdx] = useState<number | null>(0)
   const [traitSearch, setTraitSearch] = useState('')
+  const [mentorLv50Only, setMentorLv50Only] = useState(true)
 
   const trainee = roster.find(tm => tm.id === traineeId) ?? null
 
@@ -102,8 +103,8 @@ export function TrainingPlanner({ roster }: { roster: Tribesman[] }) {
   )
 
   const pool = useMemo(
-    () => buildTraitPool(roster, trainee?.clan ?? '', keptTraitIds, clanExclusiveIds),
-    [roster, trainee?.clan, keptTraitIds],
+    () => buildTraitPool(roster, trainee?.clan ?? '', keptTraitIds, clanExclusiveIds, mentorLv50Only ? 50 : 0),
+    [roster, trainee?.clan, keptTraitIds, mentorLv50Only],
   )
 
   const traitLookup = useMemo(() => {
@@ -162,6 +163,8 @@ export function TrainingPlanner({ roster }: { roster: Tribesman[] }) {
           selectedIds={desiredTraitIds}
           onSelect={handleSelectTrait}
           activeSlotIdx={activeSlotIdx}
+          mentorLv50Only={mentorLv50Only}
+          onToggleMentorLv50={setMentorLv50Only}
         />
       </div>
       <div className="overflow-hidden">
@@ -177,6 +180,7 @@ export function TrainingPlanner({ roster }: { roster: Tribesman[] }) {
             desiredTraitIds={desiredTraitIds}
             focusTraitId={focusTraitId}
             traineeId={traineeId}
+            minMentorLevel={mentorLv50Only ? 50 : 0}
           />
         )}
       </div>

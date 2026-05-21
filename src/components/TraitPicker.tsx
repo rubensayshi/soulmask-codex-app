@@ -9,9 +9,11 @@ interface Props {
   selectedIds: Set<string>
   onSelect: (id: string) => void
   activeSlotIdx: number | null
+  mentorLv50Only: boolean
+  onToggleMentorLv50: (v: boolean) => void
 }
 
-export function TraitPicker({ pool, search, onSearchChange, selectedIds, onSelect, activeSlotIdx }: Props) {
+export function TraitPicker({ pool, search, onSearchChange, selectedIds, onSelect, activeSlotIdx, mentorLv50Only, onToggleMentorLv50 }: Props) {
   const filtered = useMemo(() => {
     if (!search) return pool
     const q = search.toLowerCase()
@@ -22,15 +24,46 @@ export function TraitPicker({ pool, search, onSearchChange, selectedIds, onSelec
 
   return (
     <div className="flex flex-col gap-3 h-full" style={{ padding: 16 }}>
-      <span
-        className="uppercase"
-        style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '0.1em' }}
-      >
-        Available traits{' '}
-        <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: '0.02em' }}>
-          (from your roster's Lv.50+ mentors)
+      <div className="flex items-center justify-between">
+        <span
+          className="uppercase"
+          style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '0.1em' }}
+        >
+          Available traits{' '}
+          <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: '0.02em' }}>
+            ({mentorLv50Only ? 'from Lv.50+ mentors' : 'from all roster'})
+          </span>
         </span>
-      </span>
+        <label
+          className="flex items-center gap-1.5 cursor-pointer select-none"
+          style={{ fontSize: 10, color: 'var(--color-muted)' }}
+        >
+          <span>Lv.50+ only</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={mentorLv50Only}
+            onClick={() => onToggleMentorLv50(!mentorLv50Only)}
+            className="relative rounded-full transition-colors"
+            style={{
+              width: 28,
+              height: 16,
+              background: mentorLv50Only ? 'oklch(0.55 0.08 165)' : 'oklch(0.30 0.01 130)',
+              border: '1px solid oklch(0.40 0.02 130)',
+            }}
+          >
+            <span
+              className="absolute top-[2px] rounded-full transition-[left]"
+              style={{
+                width: 10,
+                height: 10,
+                background: 'var(--color-text)',
+                left: mentorLv50Only ? 15 : 3,
+              }}
+            />
+          </button>
+        </label>
+      </div>
 
       <div
         className="flex items-center rounded-[var(--radius)]"
@@ -55,7 +88,9 @@ export function TraitPicker({ pool, search, onSearchChange, selectedIds, onSelec
         {filtered.length === 0 && (
           <div style={{ padding: '20px 0', color: 'var(--color-faint)', fontSize: 12, fontStyle: 'italic', textAlign: 'center' }}>
             {pool.length === 0
-              ? 'No eligible mentors in roster (Lv.50+ required)'
+              ? mentorLv50Only
+                ? 'No eligible mentors in roster (Lv.50+ required)'
+                : 'No eligible mentors in roster'
               : 'No traits match your search.'}
           </div>
         )}

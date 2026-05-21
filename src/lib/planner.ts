@@ -30,8 +30,9 @@ export function buildTraitPool(
   traineeClan: string,
   keptTraitIds: Set<string>,
   clanExclusiveIds?: Map<string, string>,
+  minMentorLevel = 50,
 ): PoolTrait[] {
-  const mentors = roster.filter(tm => tm.level >= 50)
+  const mentors = roster.filter(tm => tm.level >= minMentorLevel)
   const pool = new Map<string, PoolTrait>()
 
   for (const mentor of mentors) {
@@ -77,11 +78,12 @@ export interface RankedMentor {
 export function rankMentors(
   roster: Tribesman[],
   desiredTraitIds: Set<string>,
+  minMentorLevel = 50,
 ): RankedMentor[] {
   const results: RankedMentor[] = []
 
   for (const tm of roster) {
-    if (tm.level < 50) continue
+    if (tm.level < minMentorLevel) continue
     const normalTraits = tm.traits.filter(t => t.shape === 'hexagon')
     if (normalTraits.length === 0) continue
     const desired = normalTraits.filter(t => desiredTraitIds.has(t.id))
