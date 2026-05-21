@@ -6,9 +6,17 @@ use tauri::{AppHandle, Emitter, Manager};
 use xcap::{Monitor, Window};
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Alternative {
+    pub icon_name: String,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TraitMatch {
     pub icon_name: String,
     pub confidence: f64,
+    #[serde(default)]
+    pub alternatives: Vec<Alternative>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

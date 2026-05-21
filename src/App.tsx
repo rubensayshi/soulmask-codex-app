@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
-import { REVIEW_ITEMS, ENABLE_PROFICIENCIES } from './lib/data'
+import { ENABLE_PROFICIENCIES } from './lib/data'
 import { useRosterStore, type CaptureStatus, type LogEntry } from './lib/store'
 import type { Filters, SortState, LayoutMode, ProcessResult } from './lib/types'
 import { RosterTable, sortRows, filterRows } from './pages/Roster'
@@ -203,16 +203,18 @@ function App() {
           </RailBtn>
           <RailBtn active={screen === 'review'} onClick={() => setScreen('review')} title="Review queue">
             <IcoFlag />
-            <span
-              className="absolute grid place-items-center rounded-full"
-              style={{
-                top: 4, right: 4, minWidth: 14, height: 14,
-                background: 'var(--color-gold)', color: '#1a1a14',
-                fontSize: 9, fontWeight: 700, padding: '0 3px',
-              }}
-            >
-              {REVIEW_ITEMS.length}
-            </span>
+            {store.reviewQueue.length > 0 && (
+              <span
+                className="absolute grid place-items-center rounded-full"
+                style={{
+                  top: 4, right: 4, minWidth: 14, height: 14,
+                  background: 'var(--color-gold)', color: '#1a1a14',
+                  fontSize: 9, fontWeight: 700, padding: '0 3px',
+                }}
+              >
+                {store.reviewQueue.length}
+              </span>
+            )}
           </RailBtn>
           <div className="flex-1" />
           <RailBtn onClick={() => setShowSettings(true)} title="Settings">

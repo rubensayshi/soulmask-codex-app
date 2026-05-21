@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { REVIEW_ITEMS } from '../lib/data'
+import { useRosterStore } from '../lib/store'
 import { IcoCheck } from './Icons'
 
 interface Props {
@@ -7,9 +7,13 @@ interface Props {
 }
 
 export function ReviewScreen({ onDone }: Props) {
+  const reviewItems = useRosterStore(s => s.reviewQueue)
+  const commitReview = useRosterStore(s => s.commitReview)
+  const clearReview = useRosterStore(s => s.clearReview)
+
   const [picks, setPicks] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {}
-    REVIEW_ITEMS.forEach(it => { m[it.id] = it.options[0].id })
+    reviewItems.forEach(it => { m[it.id] = it.options[0]?.id ?? '' })
     return m
   })
   const [fixed, setFixed] = useState<Record<string, boolean>>({})
@@ -19,9 +23,34 @@ export function ReviewScreen({ onDone }: Props) {
     setFixed(f => ({ ...f, [itemId]: true }))
   }
 
-  const remaining = REVIEW_ITEMS.filter(it => !fixed[it.id]).length
-  const reviewed = REVIEW_ITEMS.length - remaining
-  const pct = REVIEW_ITEMS.length > 0 ? (reviewed / REVIEW_ITEMS.length * 100) : 0
+  function handleCommit() {
+    commitReview(picks)
+    onDone()
+  }
+
+  function handleSkip() {
+    clearReview()
+    onDone()
+  }
+
+  if (reviewItems.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4" style={{ color: 'var(--color-text-dim)' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--color-accent)' }}>
+          ◆ All clear
+        </span>
+        <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600, color: 'var(--color-text)' }}>
+          No items to review
+        </h2>
+        <p style={{ fontSize: 13 }}>All trait matches are above 80% confidence.</p>
+        <button className="btn-outline" onClick={onDone}>Back to roster</button>
+      </div>
+    )
+  }
+
+  const remaining = reviewItems.filter(it => !fixed[it.id]).length
+  const reviewed = reviewItems.length - remaining
+  const pct = reviewItems.length > 0 ? (reviewed / reviewItems.length * 100) : 0
 
   return (
     <div className="flex flex-col h-full">
@@ -43,7 +72,7 @@ export function ReviewScreen({ onDone }: Props) {
           </span>
         </div>
         <h2 style={{ margin: '0 0 4px', fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>
-          Review <em style={{ fontStyle: 'italic', color: 'var(--color-accent)', fontWeight: 500 }}>{REVIEW_ITEMS.length} items</em>
+          Review <em style={{ fontStyle: 'italic', color: 'var(--color-accent)', fontWeight: 500 }}>{reviewItems.length} items</em>
         </h2>
         <div style={{ color: 'var(--color-text-dim)', fontSize: 13, marginBottom: 14 }}>
           Verify the codex's best guesses, or pick a different match. Unreviewed items will use the highest-confidence option.
@@ -57,11 +86,11 @@ export function ReviewScreen({ onDone }: Props) {
             />
           </div>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--color-muted)', letterSpacing: '0.06em' }}>
-            {reviewed} / {REVIEW_ITEMS.length} REVIEWED
+            {reviewed} / {reviewItems.length} REVIEWED
           </span>
           <span className="flex-1" />
-          <button className="btn-outline" onClick={onDone}>Skip remaining</button>
-          <button className="btn-primary" onClick={onDone}>
+          <button className="btn-outline" onClick={handleSkip}>Skip remaining</button>
+          <button className="btn-primary" onClick={handleCommit}>
             <IcoCheck size={12} /> Commit roster
           </button>
         </div>
@@ -69,7 +98,7 @@ export function ReviewScreen({ onDone }: Props) {
 
       {/* Items */}
       <div className="flex-1 overflow-auto content-scroll" style={{ padding: '0 28px' }}>
-        {REVIEW_ITEMS.map(item => {
+        {reviewItems.map(item => {
           const isFixed = fixed[item.id]
           return (
             <div
@@ -105,7 +134,7 @@ export function ReviewScreen({ onDone }: Props) {
               {/* Tribesman + options */}
               <div>
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span style={{ fontFamily: 'var(--font-serif)', fontSize: 16 }}>{item.tribesman}</span>
+                  <span style={{ fontFamily: 'var(--font-serif)', fontSize: 16 }}>{item.tribesmanName}</span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     · {item.field}
                   </span>

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Tribesman, ProcessResult, TraitMatch, ClanName, StatusType } from './types'
+import type { Tribesman, ProcessResult, TraitMatch, ClanName, StatusType, Alternative } from './types'
 import { getBestTrait, getTierForIcon, getTierForName } from './traits'
 import { normalizeTitle, normalizeClass, normalizeGroup, deduplicateGroups } from './fuzzy'
 
@@ -14,7 +14,7 @@ interface RawTribesman {
   status?: string | null
   group?: string | null
   location?: string | null
-  traits?: Array<{ icon_name: string; confidence: number }>
+  traits?: Array<{ icon_name: string; confidence: number; alternatives?: Alternative[] }>
   prof?: number[]
 }
 
@@ -48,6 +48,7 @@ function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
     allTraits.push({
       icon_name: t.icon_name,
       confidence: t.confidence,
+      alternatives: t.alternatives,
       id: info?.id ?? t.icon_name,
       name: info?.name ?? info?.name_zh ?? t.icon_name,
       shape: info?.shape ?? 'hexagon',
@@ -82,6 +83,18 @@ function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
   }
 }
 
+const REVIEW_THRESHOLD = 0.80
+
+export interface ReviewItem {
+  id: string
+  tribesmanId: string
+  tribesmanName: string
+  traitIndex: number
+  cropLabel: string
+  field: 'trait'
+  options: Array<{ id: string; name: string; pct: number }>
+}
+
 export type CaptureStatus = 'idle' | 'capturing' | 'processing' | 'done' | 'error'
 
 export type LogLevel = 'info' | 'success' | 'error'
@@ -105,6 +118,7 @@ interface RosterState {
   queueCount: number
   processProgress: string | null
   captureLog: LogEntry[]
+  reviewQueue: ReviewItem[]
 
   loadRoster: (roster: { last_updated: string; tribesmen: unknown[] }) => void
   markInitialized: () => void
@@ -116,6 +130,8 @@ interface RosterState {
   logQueuedPath: (path: string) => void
   addCaptureResult: (result: ProcessResult) => void
   clearLog: () => void
+  commitReview: (picks: Record<string, string>) => void
+  clearReview: () => void
 }
 
 function appendLog(state: { captureLog: LogEntry[] }, level: LogLevel, message: string): LogEntry[] {
@@ -148,6 +164,7 @@ export const useRosterStore = create<RosterState>((set) => ({
   queueCount: 0,
   processProgress: null,
   captureLog: [],
+  reviewQueue: [],
 
   loadRoster: (roster) => {
     const now = new Date().toISOString()
@@ -219,6 +236,37 @@ export const useRosterStore = create<RosterState>((set) => ({
           if (mapped) t.group = mapped
         }
       }
+
+      const incomingIds = new Set(incoming.map(t => t.id))
+      const keptReviews = state.reviewQueue.filter(r => !incomingIds.has(r.tribesmanId))
+      const newReviews: ReviewItem[] = []
+      for (const t of incoming) {
+        t.traits.forEach((trait, idx) => {
+          if (trait.confidence < REVIEW_THRESHOLD && trait.alternatives?.length) {
+            const options = [
+              { id: trait.icon_name, name: trait.name, pct: Math.round(trait.confidence * 100) },
+              ...trait.alternatives.map(alt => {
+                const info = getBestTrait(alt.icon_name)
+                return {
+                  id: alt.icon_name,
+                  name: info?.name ?? info?.name_zh ?? alt.icon_name,
+                  pct: Math.round(alt.confidence * 100),
+                }
+              }),
+            ]
+            newReviews.push({
+              id: `${t.id}__trait__${idx}`,
+              tribesmanId: t.id,
+              tribesmanName: t.name,
+              traitIndex: idx,
+              cropLabel: `TRAIT ICON · ${idx + 1}`,
+              field: 'trait',
+              options,
+            })
+          }
+        })
+      }
+
       const names = incoming.map(t => t.name).join(', ')
       return {
         tribesmen: merged,
@@ -226,6 +274,7 @@ export const useRosterStore = create<RosterState>((set) => ({
         captureStatus: 'done',
         processProgress: null,
         lastCaptureCount: result.cards_found,
+        reviewQueue: [...keptReviews, ...newReviews],
         captureLog: appendLog(state, 'success',
           `Found ${result.cards_found} card${result.cards_found !== 1 ? 's' : ''}, ${incoming.length} tribesman${incoming.length !== 1 ? 'en' : ''}${names ? ': ' + names : ''}`
         ),
@@ -239,6 +288,45 @@ export const useRosterStore = create<RosterState>((set) => ({
       }
     }
   }),
+
+  commitReview: (picks) => set((state) => {
+    const tribesmen = [...state.tribesmen]
+    const committed = new Set<string>()
+    for (const [reviewId, chosenIconName] of Object.entries(picks)) {
+      const item = state.reviewQueue.find(r => r.id === reviewId)
+      if (!item) continue
+      const tIdx = tribesmen.findIndex(t => t.id === item.tribesmanId)
+      if (tIdx < 0) continue
+      const t = { ...tribesmen[tIdx], traits: [...tribesmen[tIdx].traits] }
+      const trait = t.traits[item.traitIndex]
+      if (!trait || trait.icon_name === chosenIconName) {
+        committed.add(reviewId)
+        continue
+      }
+      const info = getBestTrait(chosenIconName)
+      const tierInfo = getTierForIcon(chosenIconName) ?? (info?.name ? getTierForName(info.name) : null)
+      t.traits[item.traitIndex] = {
+        ...trait,
+        icon_name: chosenIconName,
+        id: info?.id ?? chosenIconName,
+        name: info?.name ?? info?.name_zh ?? chosenIconName,
+        shape: info?.shape ?? trait.shape,
+        eff: info?.description ?? '',
+        star: info?.star ?? 1,
+        tier: tierInfo?.tier ?? null,
+        tier_tags: tierInfo?.tags,
+        tier_note: tierInfo?.note,
+      }
+      tribesmen[tIdx] = t
+      committed.add(reviewId)
+    }
+    return {
+      tribesmen,
+      reviewQueue: state.reviewQueue.filter(r => !committed.has(r.id)),
+    }
+  }),
+
+  clearReview: () => set({ reviewQueue: [] }),
 
   clearLog: () => set({ captureLog: [] }),
 }))

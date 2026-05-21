@@ -33,7 +33,14 @@ def process_image(image_path: str, atlas_dir: str) -> dict:
                 "status": text.status,
                 "group": text.group,
                 "traits": [
-                    {"icon_name": m.icon_name, "confidence": round(m.confidence, 3)}
+                    {
+                        "icon_name": m.icon_name,
+                        "confidence": round(m.confidence, 3),
+                        "alternatives": [
+                            {"icon_name": n, "confidence": round(s, 3)}
+                            for n, s in m.alternatives
+                        ],
+                    }
                     for m in matches
                 ],
                 "card_index": i,

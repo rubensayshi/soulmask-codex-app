@@ -344,6 +344,11 @@ export function CaptureModal({ onClose, onDone }: Props) {
               Results have been merged into your roster.
             </p>
             <div className="flex justify-end gap-2.5">
+              {store.reviewQueue.length > 0 && (
+                <button className="btn-primary" onClick={() => onDone('review')}>
+                  Review {store.reviewQueue.length} item{store.reviewQueue.length !== 1 ? 's' : ''}
+                </button>
+              )}
               <button className="btn-outline" onClick={() => onDone()}>Done</button>
             </div>
           </div>

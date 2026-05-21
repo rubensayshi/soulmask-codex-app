@@ -4,9 +4,15 @@ export type BadgeShape = 'hexagon' | 'diamond' | 'shield'
 export type Tier = 'S' | 'A' | 'B' | 'C' | 'D' | 'F'
 export type LayoutMode = 'table' | 'cards' | 'split'
 
+export interface Alternative {
+  icon_name: string
+  confidence: number
+}
+
 export interface TraitMatch {
   icon_name: string
   confidence: number
+  alternatives?: Alternative[]
   id: string
   name: string
   shape: BadgeShape
