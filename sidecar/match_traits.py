@@ -11,6 +11,7 @@ class TraitMatch:
     icon_name: str
     confidence: float
     bbox: tuple[int, int, int, int]  # x, y, w, h within the icon row
+    alternatives: list[tuple[str, float]] = field(default_factory=list)
 
 
 CONFIDENCE_THRESHOLD = 0.62
@@ -207,8 +208,7 @@ def segment_icons(trait_row: np.ndarray, expected_size: int = 64) -> list[tuple[
         x2 = x1 + icon_size
         if x2 > w:
             break
-        if x1 < 0:
-            continue
+        x1 = max(0, x1)
         y1 = max(0, cy_med - half)
         y2 = min(h, y1 + icon_size)
         crop = trait_row[y1:y2, x1:x2]
@@ -309,11 +309,19 @@ def _assign_zones(icons: list[tuple[np.ndarray, int, int]]) -> list[str]:
     return zones
 
 
+def _top_alts(ranked: list[tuple[str, float]], primary: str, threshold: float,
+              taken: dict[str, int], limit: int = 2) -> list[tuple[str, float]]:
+    return [(n, s) for n, s in ranked if n != primary and s >= threshold and n not in taken][:limit]
+
+
 def _dedup_matches(candidates: list) -> list[TraitMatch]:
     """Deduplicate by icon_name: when two icons match the same template,
     the weaker one falls back to its next-best above-threshold match."""
     taken: dict[str, int] = {}
     result: list[TraitMatch] = [c.match for c in candidates]
+
+    for idx, c in enumerate(candidates):
+        result[idx].alternatives = _top_alts(c.ranked, c.match.icon_name, c.threshold, taken)
 
     for idx, c in enumerate(candidates):
         name = c.match.icon_name
@@ -335,7 +343,8 @@ def _dedup_matches(candidates: list) -> list[TraitMatch]:
                 break
             if alt_name not in taken:
                 alt_match = TraitMatch(icon_name=alt_name, confidence=alt_score,
-                                       bbox=loser.match.bbox)
+                                       bbox=loser.match.bbox,
+                                       alternatives=_top_alts(loser.ranked, alt_name, loser.threshold, taken))
                 result[loser_idx] = alt_match
                 taken[alt_name] = loser_idx
                 reassigned = True
