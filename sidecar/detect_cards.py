@@ -133,11 +133,28 @@ def _filter_by_gap(lines: list[int], h: int) -> list[int]:
     dominant_h = int(np.median(gaps_sorted[: max(len(gaps_sorted) // 2, 2)]))
     min_card_h = int(dominant_h * 0.65)
 
-    filtered = [merged[-1]]
-    for y in reversed(merged[:-1]):
-        if filtered[-1] - y >= min_card_h:
-            filtered.append(y)
-    filtered.reverse()
+    def _sweep(pts: list[int], reverse: bool) -> list[int]:
+        seq = list(reversed(pts)) if reverse else pts
+        out = [seq[0]]
+        for y in seq[1:]:
+            gap = abs(y - out[-1])
+            if gap >= min_card_h:
+                out.append(y)
+        if reverse:
+            out.reverse()
+        return out
+
+    bottom_up = _sweep(merged, reverse=True)
+    top_down = _sweep(merged, reverse=False)
+
+    def _variance(seps: list[int]) -> float:
+        if len(seps) < 2:
+            return 0.0
+        gs = [seps[i + 1] - seps[i] for i in range(len(seps) - 1)]
+        avg = sum(gs) / len(gs)
+        return sum((g - avg) ** 2 for g in gs) / len(gs)
+
+    filtered = top_down if _variance(top_down) <= _variance(bottom_up) else bottom_up
 
     if len(filtered) >= 3:
         g1 = filtered[1] - filtered[0]
@@ -155,23 +172,26 @@ def _find_column_gap(gray: np.ndarray, sep_ys: list[int], w: int) -> int:
     if len(sep_ys) < 2:
         return w // 2
 
-    y_start = sep_ys[0]
+    y_start = sep_ys[len(sep_ys) // 2] if len(sep_ys) > 2 else sep_ys[0]
     y_end = sep_ys[-1]
-    search_start = int(w * 0.25)
-    search_end = int(w * 0.75)
+    search_start = int(w * 0.40)
+    search_end = int(w * 0.60)
 
     strip = gray[y_start:y_end, search_start:search_end]
     col_brightness = np.mean(strip, axis=0)
 
-    # Smooth to avoid noise
     kernel_size = max(w // 100, 5)
     if kernel_size % 2 == 0:
         kernel_size += 1
     smoothed = cv2.GaussianBlur(col_brightness.reshape(1, -1), (kernel_size, 1), 0).flatten()
 
-    # The gap between columns is brighter (game world shows through)
-    gap_x = int(np.argmax(smoothed)) + search_start
-    return gap_x
+    # Gap can be the brightest (daytime) or darkest (nighttime) column;
+    # pick whichever candidate is closer to the image center.
+    center = (search_end - search_start) // 2
+    x_max = int(np.argmax(smoothed))
+    x_min = int(np.argmin(smoothed))
+    gap_local = x_max if abs(x_max - center) <= abs(x_min - center) else x_min
+    return gap_local + search_start
 
 
 def _build_grid(sep_ys: list[int], gap_x: int, w: int, h: int) -> list[Card]:
