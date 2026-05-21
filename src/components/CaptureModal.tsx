@@ -211,7 +211,7 @@ export function CaptureModal({ onClose, onDone }: Props) {
               ? <>Capture <em style={{ fontStyle: 'italic', color: 'var(--color-accent)', fontWeight: 500 }}>complete</em></>
               : <>Capture <em style={{ fontStyle: 'italic', color: 'var(--color-accent)', fontWeight: 500 }}>roster</em></>}
           </h2>
-          <button onClick={onClose} style={{ color: 'var(--color-muted)' }}><IcoX /></button>
+          <button onClick={onClose} className="grid place-items-center rounded-lg" style={{ width: 36, height: 36, color: 'var(--color-muted)' }}><IcoX /></button>
         </div>
 
         {/* Pick phase */}

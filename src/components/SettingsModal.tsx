@@ -31,7 +31,7 @@ export function SettingsModal({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between sticky top-0 z-10" style={{ padding: '16px 22px', borderBottom: '1px solid var(--color-border-soft)', background: 'var(--color-bg)' }}>
           <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 600 }}>Settings</h2>
-          <button onClick={onClose} style={{ color: 'var(--color-muted)' }}><IcoX /></button>
+          <button onClick={onClose} className="grid place-items-center rounded-lg" style={{ width: 36, height: 36, color: 'var(--color-muted)' }}><IcoX /></button>
         </div>
 
         {/* Capture group */}
@@ -176,7 +176,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
     <button
       className="rounded-full transition-all shrink-0"
       style={{
-        width: 38, height: 20,
+        width: 44, height: 26,
         background: on ? 'var(--color-accent)' : 'var(--color-border)',
         position: 'relative',
       }}
@@ -185,8 +185,8 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
       <span
         className="absolute rounded-full transition-all"
         style={{
-          width: 14, height: 14, top: 3,
-          left: on ? 21 : 3,
+          width: 18, height: 18, top: 3,
+          left: on ? 23 : 3,
           background: on ? 'var(--color-text)' : 'var(--color-muted)',
         }}
       />

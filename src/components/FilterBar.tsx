@@ -105,7 +105,7 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
       <div
         className="inline-flex items-center gap-1 rounded-full border transition-all duration-100"
         style={{
-          height: 26,
+          height: 28,
           padding: '0 8px',
           border: `1px solid ${filters.minLevel !== null && ![30, 40, 50].includes(filters.minLevel) ? 'var(--color-accent-soft)' : 'var(--color-border)'}`,
           background: filters.minLevel !== null && ![30, 40, 50].includes(filters.minLevel) ? 'var(--color-accent-glow)' : 'transparent',
@@ -179,8 +179,8 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
               onClick={() => setTierFilter(on ? null : tier)}
               className="transition-all duration-100"
               style={{
-                width: 22, height: 20,
-                borderRadius: 3,
+                width: 28, height: 26,
+                borderRadius: 4,
                 border: `1.5px solid ${on ? tc.bg : 'transparent'}`,
                 background: on ? tc.bg : `color-mix(in oklch, ${tc.bg} 20%, transparent)`,
                 color: on ? tc.text : tc.bg,
@@ -262,7 +262,7 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
           <div
             className="inline-flex items-center gap-1 rounded-full border transition-all duration-100"
             style={{
-              height: 26,
+              height: 28,
               padding: '0 8px',
               border: `1px solid ${filters.prof !== null && ![90, 120, 150].includes(filters.prof.min) ? 'var(--color-accent-soft)' : 'var(--color-border)'}`,
               background: filters.prof !== null && ![90, 120, 150].includes(filters.prof.min) ? 'var(--color-accent-glow)' : 'transparent',
@@ -303,7 +303,7 @@ function Chip({ on, onClick, children, style, title }: {
       title={title}
       className="inline-flex items-center gap-1.5 rounded-full border transition-all duration-100"
       style={{
-        height: 26,
+        height: 28,
         padding: '0 10px',
         fontSize: '11.5px',
         border: `1px solid ${on ? 'var(--color-accent-soft)' : 'var(--color-border)'}`,

@@ -46,19 +46,19 @@ export function TraitPicker({ pool, search, onSearchChange, selectedIds, onSelec
             onClick={() => onToggleMentorLv50(!mentorLv50Only)}
             className="relative rounded-full transition-colors"
             style={{
-              width: 28,
-              height: 16,
+              width: 36,
+              height: 22,
               background: mentorLv50Only ? 'oklch(0.55 0.08 165)' : 'oklch(0.30 0.01 130)',
               border: '1px solid oklch(0.40 0.02 130)',
             }}
           >
             <span
-              className="absolute top-[2px] rounded-full transition-[left]"
+              className="absolute top-[3px] rounded-full transition-[left]"
               style={{
-                width: 10,
-                height: 10,
+                width: 14,
+                height: 14,
                 background: 'var(--color-text)',
-                left: mentorLv50Only ? 15 : 3,
+                left: mentorLv50Only ? 19 : 3,
               }}
             />
           </button>

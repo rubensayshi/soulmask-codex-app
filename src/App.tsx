@@ -556,7 +556,8 @@ function CaptureLogPanel({ log, onClear }: { log: LogEntry[]; onClear: () => voi
         <span className="flex-1" />
         <button
           onClick={onClear}
-          style={{ color: 'var(--color-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+          className="grid place-items-center rounded"
+          style={{ width: 28, height: 28, color: 'var(--color-muted)' }}
           title="Clear log"
         >
           <IcoTrash />
@@ -620,7 +621,8 @@ function QueueBadge({ count, onProcess, onClear }: { count: number; onProcess: (
       <button
         onClick={onClear}
         title="Clear queue"
-        style={{ color: 'oklch(0.55 0.08 70)', marginLeft: 2, cursor: 'pointer', background: 'none', border: 'none', padding: '0 2px', fontSize: 11 }}
+        className="grid place-items-center rounded-full"
+        style={{ width: 24, height: 24, color: 'oklch(0.55 0.08 70)', cursor: 'pointer', background: 'none', border: 'none', fontSize: 11 }}
       >
         ✕
       </button>

@@ -77,8 +77,8 @@ export function TraitSlot({ slot, index, active, useForgetfulness, onToggleKeep,
           {desired && <Stars star={desired.star} />}
         </div>
         <button
-          className="grid place-items-center"
-          style={{ width: 16, height: 16, color: 'var(--color-muted)', fontSize: 12 }}
+          className="grid place-items-center rounded"
+          style={{ width: 24, height: 24, color: 'var(--color-muted)', fontSize: 14 }}
           onClick={e => { e.stopPropagation(); onClear() }}
         >
           ×
