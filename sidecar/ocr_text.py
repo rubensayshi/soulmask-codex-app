@@ -76,7 +76,14 @@ def parse_name(text: str) -> str:
 
     text = re.sub(r'\(X\b', 'IX', text)
     text = re.sub(r'\[V\b', 'IV', text)
-    text = re.sub(r'\(V\b', 'IV', text)
+    text = re.sub(r'\(V[v]?\b', 'IV', text)
+
+    # Fix garbled Roman numerals containing non-alpha chars (word cleanup would strip them)
+    text = re.sub(r'(?<=\s)[!\\]V[^a-zA-Z\s]*', 'IV', text)
+    text = re.sub(r'(?<=\s)Ul\b', 'II', text)
+    text = re.sub(r'(?<=\s)Il\b', 'II', text)
+    text = re.sub(r'(?<=\s)V[vu]\b', 'VII', text)
+    text = re.sub(r'(?<=\s)lV\b', 'IV', text)
 
     words = text.split()
     while words:
@@ -95,6 +102,7 @@ def parse_name(text: str) -> str:
             break
     text = ' '.join(words)
 
+    text = re.sub(r'(?<=\s)t[tl]{1,2}\b', lambda m: 'I' * len(m.group()), text)
     text = re.sub(r'(?<=\s)[lI]{2,3}(?=[\s\W]|$)', lambda m: 'I' * len(m.group()), text)
     text = re.sub(r'(?<=[a-z])[lI]{2,3}(?=[\s\W]|$)', lambda m: ' ' + 'I' * len(m.group()), text)
     text = re.sub(r'(?<=\s)l(?=\s|$)', 'I', text)
@@ -103,10 +111,12 @@ def parse_name(text: str) -> str:
     text = re.sub(r'VIL\b', 'VII', text)
     text = re.sub(r'VUS\b', 'VII', text)
     text = re.sub(r'VU\b', 'VII', text)
-    text = re.sub(r'Vie\b', 'VI', text)
+    text = re.sub(r'[Vv]ie\b', 'VI', text)
     text = re.sub(r'VIS\b', 'VI', text)
     text = re.sub(r'VL\b', 'VI', text)
     text = re.sub(r'(?<=\s)LX\b', 'IX', text)
+    text = re.sub(r'VUL\b', 'VIII', text)
+    text = re.sub(r'(?<=\s)Vir\b', 'VIII', text)
 
     text = re.sub(r'\s+(V?I{0,3})L(?=["\x27\u201c\u201d\u2018\u2019\s]|$)', lambda m: ' ' + m.group(1) + 'I', text)
     text = re.sub(r'["\x27\u201c\u201d\u2018\u2019]$', '', text).strip()
@@ -531,6 +541,28 @@ def extract_card_text(card_img: np.ndarray) -> CardText:
             if sc >= 10 and cand == tail:
                 name = cand
                 break
+
+    # Cross-threshold Roman numeral recovery: if any candidate produced a
+    # Roman suffix with a matching base name, adopt it via majority vote
+    _ROMAN_RE = re.compile(r'\s+(VIII|VII|VI|IX|IV|V|III|II|X|I)$')
+    rm = _ROMAN_RE.search(name)
+    name_base = name[:rm.start()] if rm else name
+    roman_votes: list[str] = []
+    for cand, _ in scored:
+        cm = _ROMAN_RE.search(cand)
+        if not cm:
+            continue
+        cand_base = cand[:cm.start()]
+        if cand_base == name_base or (len(name_base) >= 4 and cand_base.endswith(name_base)):
+            roman_votes.append(cm.group(1))
+    if roman_votes:
+        from collections import Counter
+        top_roman, top_count = Counter(roman_votes).most_common(1)[0]
+        current = rm.group(1) if rm else None
+        if not current:
+            name = name_base + ' ' + top_roman
+        elif top_count > roman_votes.count(current):
+            name = name_base + ' ' + top_roman
 
     # Level/class/clan: purple text has poor grayscale contrast but high R channel.
     level_img = crop_region(card_img, "level_line")
