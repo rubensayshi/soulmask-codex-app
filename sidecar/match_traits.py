@@ -1,8 +1,9 @@
 """Stage 3-4: Extract trait icons from card row and match against reference atlas."""
+import json
 import os
 import cv2
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -78,20 +79,43 @@ def load_atlas(atlas_dir: str, size: int | None = None) -> dict[str, np.ndarray]
     return atlas
 
 
+def build_neg_map(traits_json_path: str) -> dict[str, str]:
+    """Build mapping from positive base icon_name -> negative _2 icon_name."""
+    try:
+        with open(traits_json_path) as f:
+            traits = json.load(f)
+        neg = {}
+        for t in traits:
+            iname = t.get("icon_name", "")
+            if t.get("is_negative") and iname.endswith("_2"):
+                neg[iname[:-2]] = iname
+        return neg
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        return {}
+
+
 @dataclass
 class ShapedAtlas:
     full: dict[str, dict[str, np.ndarray]]
     cropped: dict[str, dict[str, np.ndarray]]
+    red: dict[str, dict[str, np.ndarray]]
+    neg_map: dict[str, str] = field(default_factory=dict)
 
 
-def split_atlas_by_shape(atlas: dict[str, np.ndarray]) -> ShapedAtlas:
+def split_atlas_by_shape(atlas: dict[str, np.ndarray], neg_map: dict[str, str] | None = None) -> ShapedAtlas:
     full: dict[str, dict[str, np.ndarray]] = {"hexagon": {}, "diamond": {}, "shield": {}}
     cropped: dict[str, dict[str, np.ndarray]] = {"hexagon": {}, "diamond": {}, "shield": {}}
+    red: dict[str, dict[str, np.ndarray]] = {"hexagon": {}, "diamond": {}, "shield": {}}
     for name, img in atlas.items():
+        if name.endswith("_neg"):
+            base = name[:-4]
+            shape = _icon_shape(base)
+            red[shape][base] = img
+            continue
         shape = _icon_shape(name)
         full[shape][name] = img
         cropped[shape][name] = _crop_interior(img)
-    return ShapedAtlas(full=full, cropped=cropped)
+    return ShapedAtlas(full=full, cropped=cropped, red=red, neg_map=neg_map or {})
 
 
 MAX_TRAIT_SLOTS = 16
@@ -101,7 +125,7 @@ def _find_grid_anchors(gray: np.ndarray) -> list[tuple[int, int, int]]:
     """Find a few bright icons to establish grid pitch and y-center."""
     h, w = gray.shape
     min_side = min(max(int(h * 0.35), 16), 28)
-    max_side = min(int(h * 1.5), 60)
+    max_side = max(int(h * 0.85), 40)
     candidates: list[tuple[int, int, int]] = []
     for thresh in range(25, 90, 15):
         _, binary = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)
@@ -315,19 +339,98 @@ def _dedup_matches(candidates: list) -> list[TraitMatch]:
     return [m for m in result if m is not None]
 
 
+_EDGE_RERANK_MIN_PX = 50
+_EDGE_RERANK_MARGIN = 0.95
+_SHIELD_CCOEFF_MIN_PX = 64
+_SHIELD_CCOEFF_TOP_N = 5
+_SHIELD_CCOEFF_SZ = 48
+
+
+def _ccoeff_rerank_shield(ranked: list[tuple[str, float]], icon_img: np.ndarray,
+                          atlas_subset: dict[str, np.ndarray]) -> list[tuple[str, float]]:
+    if min(icon_img.shape[:2]) < _SHIELD_CCOEFF_MIN_PX:
+        return ranked
+    if len(ranked) < 2:
+        return ranked
+    interior = _crop_interior(icon_img, 0.25)
+    gray = cv2.equalizeHist(cv2.cvtColor(interior, cv2.COLOR_BGR2GRAY))
+    gray = cv2.resize(gray, (_SHIELD_CCOEFF_SZ, _SHIELD_CCOEFF_SZ))
+    scores: list[tuple[str, float]] = []
+    for name, _ in ranked[:_SHIELD_CCOEFF_TOP_N]:
+        ref = atlas_subset.get(name)
+        if ref is None:
+            continue
+        ref_int = _crop_interior(ref, 0.25)
+        ref_gray = cv2.equalizeHist(cv2.cvtColor(ref_int, cv2.COLOR_BGR2GRAY))
+        ref_gray = cv2.resize(ref_gray, (_SHIELD_CCOEFF_SZ, _SHIELD_CCOEFF_SZ))
+        result = cv2.matchTemplate(gray, ref_gray, cv2.TM_CCOEFF_NORMED)
+        scores.append((name, float(result[0][0])))
+    if not scores:
+        return ranked
+    scores.sort(key=lambda x: x[1], reverse=True)
+    best_ccoeff = scores[0][0]
+    if best_ccoeff != ranked[0][0]:
+        ccorr_score = next(s for n, s in ranked if n == best_ccoeff)
+        rest = [(n, s) for n, s in ranked if n != best_ccoeff]
+        return [(best_ccoeff, ccorr_score)] + rest
+    return ranked
+
+
+def _edge_iou(icon_img: np.ndarray, ref_img: np.ndarray) -> float:
+    target = ref_img.shape[0]
+    interior_ic = _crop_interior(icon_img, margin_frac=0.25)
+    interior_ref = _crop_interior(ref_img, margin_frac=0.25)
+    g_ic = cv2.equalizeHist(cv2.cvtColor(interior_ic, cv2.COLOR_BGR2GRAY))
+    g_ref = cv2.equalizeHist(cv2.cvtColor(interior_ref, cv2.COLOR_BGR2GRAY))
+    g_ic = cv2.resize(g_ic, (target, target))
+    g_ref = cv2.resize(g_ref, (target, target))
+    k = np.ones((2, 2), np.uint8)
+    e_ic = cv2.dilate(cv2.Canny(cv2.GaussianBlur(g_ic, (3, 3), 0.5), 30, 100), k)
+    e_ref = cv2.dilate(cv2.Canny(cv2.GaussianBlur(g_ref, (3, 3), 0.5), 30, 100), k)
+    union = np.sum(cv2.bitwise_or(e_ic, e_ref) > 0)
+    if union == 0:
+        return 0.0
+    return float(np.sum(cv2.bitwise_and(e_ic, e_ref) > 0)) / union
+
+
+def _edge_rerank(ranked: list[tuple[str, float]], icon_img: np.ndarray,
+                 atlas_subset: dict[str, np.ndarray]) -> list[tuple[str, float]]:
+    if min(icon_img.shape[:2]) < _EDGE_RERANK_MIN_PX:
+        return ranked
+    if len(ranked) < 2:
+        return ranked
+    best_score = ranked[0][1]
+    candidates = [(n, s) for n, s in ranked if s >= best_score * _EDGE_RERANK_MARGIN]
+    if len(candidates) <= 1:
+        return ranked
+    best_name, best_edge = None, -1.0
+    for name, _ in candidates:
+        if name in atlas_subset:
+            e = _edge_iou(icon_img, atlas_subset[name])
+            if e > best_edge:
+                best_edge = e
+                best_name = name
+    if best_name and best_name != ranked[0][0]:
+        score = next(s for n, s in ranked if n == best_name)
+        return [(best_name, score)] + [(n, s) for n, s in ranked if n != best_name]
+    return ranked
+
+
 def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
-                    expected_icon_size: int | None = None) -> list[TraitMatch]:
+                    expected_icon_size: int | None = None,
+                    neg_map: dict[str, str] | None = None) -> list[TraitMatch]:
     """Extract and match all icons in a trait row image.
 
     Uses spatial zone assignment (shield → diamond → hex left-to-right) to
     determine each icon's shape, then matches against that subset only.
     Falls back to z-score comparison when no spatial anchors are available.
+    For large hex icons (>=50px), edge IoU re-ranks close CCORR candidates.
     Deduplicates by icon_name.
     """
     if expected_icon_size is None:
         expected_icon_size = trait_row.shape[0]
     icons = segment_icons(trait_row, expected_size=expected_icon_size)
-    shaped = split_atlas_by_shape(atlas)
+    shaped = split_atlas_by_shape(atlas, neg_map)
     thresholds = {
         "hexagon": CONFIDENCE_THRESHOLD,
         "diamond": NONHEX_CONFIDENCE_THRESHOLD,
@@ -344,9 +447,12 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
     candidates: list[_Candidate] = []
     for (icon_img, x, y), zone in zip(icons, zones):
         color, _ = _classify_border_color(icon_img)
+        orig_icon = icon_img
 
         if zone != "unknown":
-            if color in ("green", "purple", "gold"):
+            if color == "red" and shaped.red.get(zone):
+                subset = shaped.red[zone]
+            elif color in ("green", "purple", "gold"):
                 subset = shaped.full[zone]
             else:
                 subset = shaped.cropped[zone]
@@ -354,7 +460,17 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
             threshold = thresholds[zone]
             sr = _match_icon_scored(icon_img, subset)
             if sr and sr.match.confidence >= threshold:
-                sr.match.bbox = (x, y, icon_img.shape[1], icon_img.shape[0])
+                ranked = sr.ranked
+                if zone == "hexagon":
+                    ranked = _edge_rerank(ranked, orig_icon, shaped.full["hexagon"])
+                elif zone == "shield":
+                    ranked = _ccoeff_rerank_shield(ranked, orig_icon, shaped.full["shield"])
+                best_name, best_score = ranked[0]
+                if color == "red":
+                    best_name = shaped.neg_map.get(best_name, best_name)
+                sr.match = TraitMatch(icon_name=best_name, confidence=best_score,
+                                      bbox=(x, y, icon_img.shape[1], icon_img.shape[0]))
+                sr.ranked = ranked
                 candidates.append(_Candidate(match=sr.match, ranked=sr.ranked, threshold=threshold))
             continue
 
@@ -362,19 +478,36 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
         best_sr: _SubsetResult | None = None
         best_z = -1.0
         best_threshold = 0.0
+        best_shape = "hexagon"
         for shape_key, threshold in thresholds.items():
-            subset = shaped.cropped[shape_key]
+            if color == "red" and shaped.red.get(shape_key):
+                subset = shaped.red[shape_key]
+                match_img = icon_img
+            else:
+                subset = shaped.cropped[shape_key]
+                match_img = icon_crop
             if not subset:
                 continue
-            sr = _match_icon_scored(icon_crop, subset)
+            sr = _match_icon_scored(match_img, subset)
             if sr is None or sr.match.confidence < threshold:
                 continue
             if sr.z_score > best_z:
                 best_z = sr.z_score
                 best_sr = sr
                 best_threshold = threshold
+                best_shape = shape_key
         if best_sr is not None:
-            best_sr.match.bbox = (x, y, icon_img.shape[1], icon_img.shape[0])
+            ranked = best_sr.ranked
+            if best_shape == "hexagon":
+                ranked = _edge_rerank(ranked, orig_icon, shaped.full["hexagon"])
+            elif best_shape == "shield":
+                ranked = _ccoeff_rerank_shield(ranked, orig_icon, shaped.full["shield"])
+            best_name, best_score = ranked[0]
+            if color == "red":
+                best_name = shaped.neg_map.get(best_name, best_name)
+            best_sr.match = TraitMatch(icon_name=best_name, confidence=best_score,
+                                       bbox=(x, y, icon_img.shape[1], icon_img.shape[0]))
+            best_sr.ranked = ranked
             candidates.append(_Candidate(match=best_sr.match, ranked=best_sr.ranked, threshold=best_threshold))
 
     return _dedup_matches(candidates)

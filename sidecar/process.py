@@ -7,13 +7,14 @@ import cv2
 def process_image(image_path: str, atlas_dir: str) -> dict:
     from detect_cards import detect_cards, crop_region
     from ocr_text import extract_card_text
-    from match_traits import load_atlas, match_trait_row
+    from match_traits import load_atlas, match_trait_row, build_neg_map
 
     img = cv2.imread(image_path)
     if img is None:
         return {"error": f"Cannot read image: {image_path}", "tribesmen": []}
 
     atlas = load_atlas(atlas_dir) if os.path.isdir(atlas_dir) else {}
+    neg_map = build_neg_map(os.path.join(os.path.dirname(atlas_dir), "traits.json"))
     cards = detect_cards(img)
 
     tribesmen = []
@@ -22,7 +23,7 @@ def process_image(image_path: str, atlas_dir: str) -> dict:
         try:
             text = extract_card_text(card_img)
             trait_row = crop_region(card_img, "trait_row")
-            matches = match_trait_row(trait_row, atlas) if atlas else []
+            matches = match_trait_row(trait_row, atlas, neg_map=neg_map) if atlas else []
             tribesmen.append({
                 "name": text.name,
                 "level": text.level,

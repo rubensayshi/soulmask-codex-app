@@ -89,7 +89,7 @@ def _find_horizontal_separators(gray: np.ndarray, w: int, h: int) -> list[int]:
             used.add(i)
             used.add(i + 1)
 
-    if len(pairs) < 3:
+    if len(pairs) < 2:
         return _filter_by_gap(lines, h)
 
     midpoints = [(a + b) // 2 for a, b in pairs]
@@ -97,10 +97,20 @@ def _find_horizontal_separators(gray: np.ndarray, w: int, h: int) -> list[int]:
     gaps = [midpoints[i + 1] - midpoints[i] for i in range(len(midpoints) - 1)]
     card_h = int(np.median(gaps))
 
-    first_top = max(0, midpoints[0] - card_h)
-    last_bottom = min(h, midpoints[-1] + card_h)
+    above: list[int] = []
+    y = midpoints[0] - card_h
+    while y > 0:
+        above.append(max(0, y))
+        y -= card_h
+    above.reverse()
 
-    return [first_top] + midpoints + [last_bottom]
+    below: list[int] = []
+    y = midpoints[-1] + card_h
+    while y < h:
+        below.append(min(h, y))
+        y += card_h
+
+    return above + midpoints + below
 
 
 def _filter_by_gap(lines: list[int], h: int) -> list[int]:
@@ -171,9 +181,10 @@ def _build_grid(sep_ys: list[int], gap_x: int, w: int, h: int) -> list[Card]:
     right_margin = int(w * 0.04)
     col_padding = int(w * 0.01)
 
+    left_col_w = gap_x - col_padding - left_margin
     col_ranges = [
         (left_margin, gap_x - col_padding),
-        (gap_x + col_padding, w - right_margin),
+        (gap_x + col_padding, gap_x + col_padding + left_col_w),
     ]
 
     for i in range(len(sep_ys) - 1):
