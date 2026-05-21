@@ -24,6 +24,7 @@ pub fn run() {
         .manage(ProcessingFlag(std::sync::atomic::AtomicBool::new(false)))
         .invoke_handler(tauri::generate_handler![
             commands::process_images,
+            commands::import_images,
             commands::save_roster,
             commands::load_roster,
             commands::capture_screen,

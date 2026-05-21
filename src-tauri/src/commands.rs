@@ -403,6 +403,36 @@ async fn run_sidecar(paths: &[String], app: &AppHandle) -> Result<ProcessResult,
     serde_json::from_str(&stdout).map_err(|e| format!("Invalid JSON from sidecar: {}", e))
 }
 
+// ── Import images (user-supplied paths — no cleanup) ─────────────────────────
+
+#[tauri::command]
+pub async fn import_images(paths: Vec<String>, app: AppHandle) -> Result<(), String> {
+    if paths.is_empty() {
+        return Err("No images provided".to_string());
+    }
+    for p in &paths {
+        if !std::path::Path::new(p).exists() {
+            return Err(format!("File not found: {}", p));
+        }
+    }
+
+    app.emit("capture:status", "processing").ok();
+    app.emit("capture:progress", format!("0/{}", paths.len())).ok();
+
+    match run_sidecar(&paths, &app).await {
+        Ok(r) => {
+            app.emit("capture:progress", format!("{0}/{0}", paths.len())).ok();
+            app.emit("capture:result", &r).ok();
+        }
+        Err(e) => {
+            app.emit("capture:error", &e).ok();
+        }
+    }
+
+    app.emit("capture:status", "idle").ok();
+    Ok(())
+}
+
 // ── Tauri commands ────────────────────────────────────────────────────────────
 
 #[tauri::command]

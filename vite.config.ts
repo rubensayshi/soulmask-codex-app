@@ -2,6 +2,7 @@ import { createRequire } from 'node:module'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { sidecarPlugin } from './vite-sidecar-plugin'
 
 const require = createRequire(import.meta.url)
 const { getDevPort } = require('./scripts/dev-port.cjs')
@@ -10,7 +11,7 @@ const host = process.env.TAURI_DEV_HOST
 const port = getDevPort()
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), sidecarPlugin()],
   clearScreen: false,
   server: {
     port,
