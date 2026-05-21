@@ -147,7 +147,7 @@ export function TraineePanel({
               }}
             />
           </div>
-          <span style={{ color: 'var(--color-text-dim)' }}>Forgetfulness potion</span>
+          <span style={{ color: 'var(--color-text-dim)' }}>Training Amnesia Potion</span>
         </div>
       )}
 
