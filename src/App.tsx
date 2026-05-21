@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
-import { MOCK_ROSTER, REVIEW_ITEMS, ENABLE_PROFICIENCIES } from './lib/data'
+import { REVIEW_ITEMS, ENABLE_PROFICIENCIES } from './lib/data'
 import { useRosterStore, type CaptureStatus, type LogEntry } from './lib/store'
 import type { Filters, SortState, LayoutMode, ProcessResult } from './lib/types'
 import { RosterTable, sortRows, filterRows } from './pages/Roster'
@@ -31,11 +31,14 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const store = useRosterStore()
-  const rosterData = store.tribesmen.length > 0 ? store.tribesmen : (import.meta.env.DEV && !store.initialized ? MOCK_ROSTER : [])
+  const rosterData = store.tribesmen
 
   // Load persisted roster on startup
   useEffect(() => {
-    if (!('__TAURI_INTERNALS__' in window)) return
+    if (!('__TAURI_INTERNALS__' in window)) {
+      store.markInitialized()
+      return
+    }
     invoke<{ last_updated: string; tribesmen: unknown[] } | null>('load_roster')
       .then(raw => {
         if (raw) store.loadRoster(raw as Parameters<typeof store.loadRoster>[0])

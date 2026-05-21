@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
 import { IcoX } from './Icons'
 import { useTierStore } from '../lib/tierStore'
+import { useRosterStore } from '../lib/store'
+import { MOCK_ROSTER } from '../lib/data'
 
 interface Props {
   onClose: () => void
@@ -134,6 +136,8 @@ export function SettingsModal({ onClose }: Props) {
         </SettingGroup>
 
         <TierRankingsGroup />
+
+        {import.meta.env.DEV && <DevGroup onClose={onClose} />}
       </div>
     </div>
   )
@@ -282,6 +286,28 @@ function TierRankingsGroup() {
             Export
           </button>
         </div>
+      </SettingRow>
+    </SettingGroup>
+  )
+}
+
+function DevGroup({ onClose }: { onClose: () => void }) {
+  const loadRoster = useRosterStore(s => s.loadRoster)
+  const count = useRosterStore(s => s.tribesmen.length)
+
+  return (
+    <SettingGroup title="Developer">
+      <SettingRow label="Mock roster data" sub={`Load ${MOCK_ROSTER.length} generated tribesmen for UI testing.`}>
+        <button
+          className="btn-outline"
+          style={{ height: 28, padding: '0 10px', fontSize: 11 }}
+          onClick={() => {
+            loadRoster({ last_updated: new Date().toISOString(), tribesmen: MOCK_ROSTER })
+            onClose()
+          }}
+        >
+          {count > 0 ? 'Replace with mock data' : 'Load mock data'}
+        </button>
       </SettingRow>
     </SettingGroup>
   )

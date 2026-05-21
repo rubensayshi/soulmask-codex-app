@@ -71,7 +71,7 @@ cd src-tauri && cargo build
 
 - **Trait shapes**: hexagon = learned (trainable), diamond = preference, shield = innate. Only hexagons appear in planner
 - **Mentors**: must be Lv.50+ to appear in training planner pool
-- **Mock data**: `src/lib/data.ts` provides mock roster when store is empty (fallback for browser dev)
+- **Mock data**: `src/lib/data.ts` has generated mock roster data. Not loaded automatically — use Settings > Developer > "Load mock data" button in the UI (DEV mode only) when you need test data
 - **Screen capture hotkey**: Alt+Shift+S, registered via `tauri-plugin-global-shortcut`
 - **OCR thresholds**: game text is light-on-dark with semi-transparent backgrounds. OCR uses multiple threshold/channel combinations and merges results. Tuning values are in `ocr_text.py`
 - **Clan name mapping**: OCR frequently mangles clan names; `ocr_text.py` has a hardcoded `CLAN_MAP` fuzzy lookup table
