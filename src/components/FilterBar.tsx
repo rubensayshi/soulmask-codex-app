@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
 import { CLANS, PROF_SKILLS, ENABLE_PROFICIENCIES } from '../lib/data'
 import { TIER_COLORS } from './TraitBadge'
-import type { Filters, ClanName, Tribesman, Tier } from '../lib/types'
+import { getBestTrait } from '../lib/traits'
+import type { Filters, ClanName, Tribesman, Tier, BadgeShape } from '../lib/types'
 
 const CLAN_LIST: ClanName[] = ['Claw', 'Flint', 'Fang', 'Wolf', 'Horn', 'Exile', 'DLC']
 const TIER_LIST: Tier[] = ['S', 'A', 'B', 'C']
@@ -13,8 +14,24 @@ interface Props {
   roster: Tribesman[]
 }
 
+const ALL_SHAPES: BadgeShape[] = ['hexagon', 'diamond', 'shield']
+
+const SHAPE_PATHS: Record<BadgeShape, string> = {
+  hexagon: 'M6,0.75 L11,3.25 L11,8.75 L6,11.25 L1,8.75 L1,3.25 Z',
+  diamond: 'M6,0.75 L11.25,6 L6,11.25 L0.75,6 Z',
+  shield:  'M6,1 L10.5,3.5 L10.5,7 Q10.5,10 6,11.5 Q1.5,10 1.5,7 L1.5,3.5 Z',
+}
+
+const SHAPE_LABELS: Record<BadgeShape, string> = {
+  hexagon: 'Learned',
+  diamond: 'Preference',
+  shield:  'Innate',
+}
+
 export function FilterBar({ filters, setFilters, roster }: Props) {
   const [tierFilter, setTierFilter] = useState<Tier | null>(null)
+  const [shapeFilter, setShapeFilter] = useState<Set<BadgeShape>>(new Set<BadgeShape>(['hexagon', 'shield']))
+  const [polarityFilter, setPolarityFilter] = useState<'positive' | 'negative' | 'all'>('positive')
 
   const allGroups = useMemo(() => {
     const seen = new Set<string>()
@@ -25,12 +42,18 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
   }, [roster])
 
   const allTraits = useMemo(() => {
-    const seen = new Map<string, { name: string; tier: Tier | null }>()
+    const seen = new Map<string, { name: string; tier: Tier | null; shape: BadgeShape; is_negative: boolean }>()
     for (const tm of roster) {
       for (const t of tm.traits) {
         const existing = seen.get(t.id)
         if (!existing) {
-          seen.set(t.id, { name: t.name, tier: (t.tier as Tier) ?? null })
+          const info = getBestTrait(t.icon_name)
+          seen.set(t.id, {
+            name: t.name,
+            tier: (t.tier as Tier) ?? null,
+            shape: t.shape,
+            is_negative: info?.is_negative ?? false,
+          })
         } else if (t.tier && (!existing.tier || (TIER_ORDER[t.tier] ?? 99) < (TIER_ORDER[existing.tier] ?? 99))) {
           existing.tier = t.tier as Tier
         }
@@ -42,13 +65,18 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
   }, [roster])
 
   const visibleTraits = useMemo(() => {
-    if (!tierFilter) return allTraits
-    const threshold = TIER_ORDER[tierFilter] ?? 99
     return allTraits.filter(t => {
-      const effective = TIER_ORDER[t.tier ?? 'C'] ?? 3
-      return effective <= threshold
+      if (tierFilter) {
+        const threshold = TIER_ORDER[tierFilter] ?? 99
+        const effective = TIER_ORDER[t.tier ?? 'C'] ?? 3
+        if (effective > threshold) return false
+      }
+      if (!shapeFilter.has(t.shape)) return false
+      if (polarityFilter === 'positive' && t.is_negative) return false
+      if (polarityFilter === 'negative' && !t.is_negative) return false
+      return true
     })
-  }, [allTraits, tierFilter])
+  }, [allTraits, tierFilter, shapeFilter, polarityFilter])
 
   function toggleGroup(id: string) {
     const cur = filters.groups
@@ -60,6 +88,13 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
     const cur = filters.traits
     const next = cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]
     setFilters({ ...filters, traits: next })
+  }
+
+  function toggleShape(s: BadgeShape) {
+    const next = new Set(shapeFilter)
+    if (next.has(s)) next.delete(s); else next.add(s)
+    if (next.size === 0) return
+    setShapeFilter(next)
   }
 
   const allGroupsActive = filters.groups.length === 0
@@ -165,7 +200,7 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
       <span className="uppercase" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '0.1em', marginRight: 4 }}>
         Traits
       </span>
-      <Chip on={filters.traits.length === 0 && tierFilter === null} onClick={() => { setFilters({ ...filters, traits: [] }); setTierFilter(null) }}>
+      <Chip on={filters.traits.length === 0 && tierFilter === null && shapeFilter.size === 2 && shapeFilter.has('hexagon') && shapeFilter.has('shield') && polarityFilter === 'positive'} onClick={() => { setFilters({ ...filters, traits: [] }); setTierFilter(null); setShapeFilter(new Set<BadgeShape>(['hexagon', 'shield'])); setPolarityFilter('positive') }}>
         Any
       </Chip>
 
@@ -195,6 +230,66 @@ export function FilterBar({ filters, setFilters, roster }: Props) {
               }}
             >
               {tier}
+            </button>
+          )
+        })}
+      </span>
+
+      <span className="inline-flex items-center" style={{ gap: 2, marginRight: 6 }}>
+        {ALL_SHAPES.map(s => {
+          const on = shapeFilter.has(s)
+          return (
+            <button
+              key={s}
+              onClick={() => toggleShape(s)}
+              title={SHAPE_LABELS[s]}
+              className="transition-all duration-100"
+              style={{
+                width: 28, height: 26,
+                borderRadius: 4,
+                border: `1.5px solid ${on ? 'var(--color-accent-soft)' : 'transparent'}`,
+                background: on ? 'var(--color-accent-glow)' : 'color-mix(in oklch, var(--color-accent-soft) 15%, transparent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: on ? 1 : 0.4,
+              }}
+            >
+              <svg width={12} height={12} viewBox="0 0 12 12">
+                <path d={SHAPE_PATHS[s]} fill={on ? 'var(--color-accent)' : 'var(--color-muted)'} stroke="none" />
+              </svg>
+            </button>
+          )
+        })}
+      </span>
+
+      <span className="inline-flex items-center" style={{ gap: 2 }}>
+        {(['positive', 'negative', 'all'] as const).map(p => {
+          const on = polarityFilter === p
+          const label = p === 'positive' ? '+' : p === 'negative' ? '−' : '±'
+          return (
+            <button
+              key={p}
+              onClick={() => setPolarityFilter(p)}
+              title={p.charAt(0).toUpperCase() + p.slice(1)}
+              className="transition-all duration-100"
+              style={{
+                width: 28, height: 26,
+                borderRadius: 4,
+                border: `1.5px solid ${on ? 'var(--color-accent-soft)' : 'transparent'}`,
+                background: on ? 'var(--color-accent-glow)' : 'color-mix(in oklch, var(--color-accent-soft) 15%, transparent)',
+                color: on ? 'var(--color-accent)' : 'var(--color-muted)',
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono)',
+                lineHeight: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: on ? 1 : 0.5,
+              }}
+            >
+              {label}
             </button>
           )
         })}
