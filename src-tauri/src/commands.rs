@@ -426,19 +426,24 @@ pub async fn import_images(paths: Vec<String>, app: AppHandle) -> Result<(), Str
         }
     }
 
+    let total = paths.len();
     app.emit("capture:status", "processing").ok();
-    app.emit("capture:progress", format!("0/{}", paths.len())).ok();
+    app.emit("capture:progress", format!("0/{}", total)).ok();
 
-    match run_sidecar(&paths, &app).await {
-        Ok(r) => {
-            app.emit("capture:progress", format!("{0}/{0}", paths.len())).ok();
-            app.emit("capture:result", &r).ok();
-        }
-        Err(e) => {
-            app.emit("capture:error", &e).ok();
+    for (i, path) in paths.iter().enumerate() {
+        app.emit("capture:progress", format!("{}/{}", i, total)).ok();
+
+        match run_sidecar(std::slice::from_ref(path), &app).await {
+            Ok(r) => {
+                app.emit("capture:result", &r).ok();
+            }
+            Err(e) => {
+                app.emit("capture:error", &e).ok();
+            }
         }
     }
 
+    app.emit("capture:progress", format!("{0}/{0}", total)).ok();
     app.emit("capture:status", "idle").ok();
     Ok(())
 }
