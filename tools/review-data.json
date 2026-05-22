@@ -2,7 +2,7 @@
   {
     "capture": "capture_1779387105465",
     "file": "debug/captures/capture_1779387105465.png",
-    "cards_found": 4,
+    "cards_found": 2,
     "tribesmen": [
       {
         "name": "Good Base I",
@@ -10,10 +10,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.777,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 1.0,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 1.0
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -23,11 +28,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.773
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.768
               }
             ]
           },
@@ -307,9 +307,9 @@
                 "confidence": 0.763
               },
               {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.758
+                "icon_name": "Icon_NG_BuLuo_LiZhua",
+                "name": "Tribe - Power of Erosion",
+                "confidence": 0.755
               }
             ]
           },
@@ -535,10 +535,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.772,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.91,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.91
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -548,11 +553,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.767
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.763
               }
             ]
           },
@@ -1039,9 +1039,9 @@
                 "confidence": 0.844
               },
               {
-                "icon_name": "chushen_shoulie_2",
-                "name": "Origin - Obsessed with Hunting",
-                "confidence": 0.844
+                "icon_name": "tianfu_kuaisubaoza",
+                "name": "Quick Bandaging",
+                "confidence": 0.843
               }
             ]
           },
@@ -1099,10 +1099,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.801,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.996,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.996
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -1112,11 +1117,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.796
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.791
               }
             ]
           },
@@ -1640,10 +1640,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.809,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.941,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.941
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -1653,11 +1658,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.805
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.799
               }
             ]
           },
@@ -2607,10 +2607,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.792,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.919,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.919
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -2620,11 +2625,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.788
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.782
               }
             ]
           },
@@ -2663,14 +2663,14 @@
                 "confidence": 0.844
               },
               {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.844
-              },
-              {
                 "icon_name": "ChengHao_songzangzhe",
                 "name": "Death Bringer",
                 "confidence": 0.843
+              },
+              {
+                "icon_name": "ChengHao_chuanfeizhe",
+                "name": "Lung Piercer",
+                "confidence": 0.842
               }
             ]
           },
@@ -3065,9 +3065,9 @@
                 "confidence": 0.809
               },
               {
-                "icon_name": "chushen_kuli_2",
-                "name": "Origin - Work Warm-up",
-                "confidence": 0.809
+                "icon_name": "tianfu_jiasuroupi",
+                "name": "Accelerate leatherworking",
+                "confidence": 0.808
               }
             ]
           }
@@ -3656,24 +3656,24 @@
           },
           {
             "shape": "shield",
-            "selected": "ChengHao_feidaocike",
-            "selected_name": "Fly Cutter Assassin",
-            "confidence": 0.851,
+            "selected": "chushen_shoulie_2",
+            "selected_name": "Origin - Obsessed with Hunting",
+            "confidence": 0.854,
             "candidates": [
               {
-                "icon_name": "ChengHao_feidaocike",
-                "name": "Fly Cutter Assassin",
-                "confidence": 0.851
+                "icon_name": "chushen_shoulie_2",
+                "name": "Origin - Obsessed with Hunting",
+                "confidence": 0.854
               },
               {
-                "icon_name": "ChengHao_tianshengkuli",
-                "name": "Born Laborer",
-                "confidence": 0.85
+                "icon_name": "chushen_shoulie",
+                "name": "Origin - Hunting",
+                "confidence": 0.854
               },
               {
-                "icon_name": "ChengHao_zhongtiannengshou",
-                "name": "Farming Expert",
-                "confidence": 0.849
+                "icon_name": "chushen_kuli",
+                "name": "Origin - Laborer",
+                "confidence": 0.853
               }
             ]
           },
@@ -3846,10 +3846,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.805,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.948,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.948
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -3859,11 +3864,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.799
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.795
               }
             ]
           },
@@ -3938,14 +3938,14 @@
           },
           {
             "shape": "hex",
-            "selected": "chushen_kuli_2",
-            "selected_name": "Origin - Work Warm-up",
-            "confidence": 0.88,
+            "selected": "tianfu_shuangdaowuqishanghaitigao_2",
+            "selected_name": "Dual-blade DMG Reduction",
+            "confidence": 0.878,
             "candidates": [
               {
-                "icon_name": "chushen_kuli_2",
-                "name": "Origin - Work Warm-up",
-                "confidence": 0.88
+                "icon_name": "tianfu_shuangdaowuqishanghaitigao_2",
+                "name": "Dual-blade DMG Reduction",
+                "confidence": 0.878
               },
               {
                 "icon_name": "tianfu_shuangdaowuqishanghaitigao",
@@ -4007,15 +4007,10 @@
           },
           {
             "shape": "hex",
-            "selected": "tianfu_shuangdaowuqishanghaitigao_2",
-            "selected_name": "Dual-blade DMG Reduction",
+            "selected": "tianfu_shuangdaowuqishanghaitigao",
+            "selected_name": "Dual-blade DMG Increase",
             "confidence": 0.874,
             "candidates": [
-              {
-                "icon_name": "tianfu_shuangdaowuqishanghaitigao_2",
-                "name": "Dual-blade DMG Reduction",
-                "confidence": 0.874
-              },
               {
                 "icon_name": "tianfu_shuangdaowuqishanghaitigao",
                 "name": "Dual-blade DMG Increase",
@@ -4024,6 +4019,11 @@
               {
                 "icon_name": "tianfu_yiyahuanya",
                 "name": "Tit for Tat",
+                "confidence": 0.872
+              },
+              {
+                "icon_name": "tianfu_jiasuqijuzhizao",
+                "name": "Crafting Speed Up",
                 "confidence": 0.872
               }
             ]
@@ -4203,10 +4203,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.809,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.907,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.907
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -4216,11 +4221,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.804
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.799
               }
             ]
           },
@@ -4508,24 +4508,24 @@
           },
           {
             "shape": "hex",
-            "selected": "chushen_shengcun_2",
-            "selected_name": "Origin: Poor Survival I",
-            "confidence": 0.828,
+            "selected": "tianfu_maoleiwuqishanghaitigao_2",
+            "selected_name": "Spear DMG Reduction",
+            "confidence": 0.826,
             "candidates": [
               {
-                "icon_name": "chushen_shengcun_2",
-                "name": "Origin: Poor Survival I",
-                "confidence": 0.828
-              },
-              {
-                "icon_name": "chushen_shengcun",
-                "name": "Origin: Survivor",
-                "confidence": 0.828
+                "icon_name": "tianfu_maoleiwuqishanghaitigao_2",
+                "name": "Spear DMG Reduction",
+                "confidence": 0.826
               },
               {
                 "icon_name": "tianfu_maoleiwuqishanghaitigao",
                 "name": "Spear DMG Increase",
                 "confidence": 0.826
+              },
+              {
+                "icon_name": "tianfu_shanyuweizhuang",
+                "name": "Unnoticeable",
+                "confidence": 0.825
               }
             ]
           },
@@ -4546,9 +4546,9 @@
                 "confidence": 0.851
               },
               {
-                "icon_name": "chushen_bodou",
-                "name": "Origin - Fighting",
-                "confidence": 0.851
+                "icon_name": "tianfu_guijizhishou",
+                "name": "Sleight of Hand",
+                "confidence": 0.85
               }
             ]
           },
@@ -4592,9 +4592,9 @@
                 "confidence": 0.783
               },
               {
-                "icon_name": "chushen_kuli_2",
-                "name": "Origin - Work Warm-up",
-                "confidence": 0.783
+                "icon_name": "tianfu_tilihuifujiakuai",
+                "name": "Full Stamina",
+                "confidence": 0.78
               }
             ]
           }
@@ -5124,10 +5124,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.802,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.95,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.95
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -5137,11 +5142,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.798
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.792
               }
             ]
           },
@@ -5360,24 +5360,24 @@
           },
           {
             "shape": "shield",
-            "selected": "ChengHao_songzangzhe",
-            "selected_name": "Death Bringer",
-            "confidence": 0.831,
+            "selected": "chushen_bodou_2",
+            "selected_name": "Origin - Obsessed with Fighting",
+            "confidence": 0.834,
             "candidates": [
               {
-                "icon_name": "ChengHao_songzangzhe",
-                "name": "Death Bringer",
-                "confidence": 0.831
+                "icon_name": "chushen_bodou_2",
+                "name": "Origin - Obsessed with Fighting",
+                "confidence": 0.834
               },
               {
-                "icon_name": "ChengHao_duoxinzhe",
-                "name": "Heartcaptor",
-                "confidence": 0.831
+                "icon_name": "chushen_zongjiang",
+                "name": "Origin - Craftsman",
+                "confidence": 0.834
               },
               {
-                "icon_name": "Icon_NG_BuLuo_xingcunzhe",
-                "name": "Tribe - Survivor",
-                "confidence": 0.831
+                "icon_name": "chushen_zongjiang_2",
+                "name": "Origin - Manual Warm-up",
+                "confidence": 0.834
               }
             ]
           },
@@ -5452,24 +5452,24 @@
           },
           {
             "shape": "shield",
-            "selected": "ChengHao_shougongnengren",
-            "selected_name": "Expert Craftsman",
-            "confidence": 0.849,
+            "selected": "chushen_kuli_2",
+            "selected_name": "Origin - Work Warm-up",
+            "confidence": 0.85,
             "candidates": [
+              {
+                "icon_name": "chushen_kuli_2",
+                "name": "Origin - Work Warm-up",
+                "confidence": 0.85
+              },
+              {
+                "icon_name": "chushen_kuli",
+                "name": "Origin - Laborer",
+                "confidence": 0.85
+              },
               {
                 "icon_name": "ChengHao_shougongnengren",
                 "name": "Expert Craftsman",
                 "confidence": 0.849
-              },
-              {
-                "icon_name": "ChengHao_tianshengkuli",
-                "name": "Born Laborer",
-                "confidence": 0.847
-              },
-              {
-                "icon_name": "ChengHao_feidaocike",
-                "name": "Fly Cutter Assassin",
-                "confidence": 0.846
               }
             ]
           },
@@ -6062,24 +6062,24 @@
           },
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.86,
+            "selected": "chushen_shoulie_2",
+            "selected_name": "Origin - Obsessed with Hunting",
+            "confidence": 0.867,
             "candidates": [
               {
-                "icon_name": "ChengHao_chuanfeizhe",
-                "name": "Lung Piercer",
-                "confidence": 0.86
+                "icon_name": "chushen_shoulie_2",
+                "name": "Origin - Obsessed with Hunting",
+                "confidence": 0.867
               },
               {
-                "icon_name": "ChengHao_jianshudashi",
-                "name": "Archery Master",
-                "confidence": 0.86
+                "icon_name": "chushen_shoulie",
+                "name": "Origin - Hunting",
+                "confidence": 0.867
               },
               {
-                "icon_name": "ChengHao_shougongnengren",
-                "name": "Expert Craftsman",
-                "confidence": 0.86
+                "icon_name": "chushen_kuli",
+                "name": "Origin - Laborer",
+                "confidence": 0.867
               }
             ]
           },
@@ -8699,8 +8699,8 @@
                 "confidence": 0.837
               },
               {
-                "icon_name": "chushen_shoulie",
-                "name": "Origin - Hunting",
+                "icon_name": "tianfu__gongsuqiequ",
+                "name": "Attack Speed Steal",
                 "confidence": 0.836
               }
             ]
@@ -9812,24 +9812,24 @@
           },
           {
             "shape": "hex",
-            "selected": "chushen_zongjiang_2",
-            "selected_name": "Origin - Manual Warm-up",
-            "confidence": 0.878,
+            "selected": "tianfu_jimin_2",
+            "selected_name": "Slow-witted",
+            "confidence": 0.876,
             "candidates": [
               {
-                "icon_name": "chushen_zongjiang_2",
-                "name": "Origin - Manual Warm-up",
-                "confidence": 0.878
+                "icon_name": "tianfu_jimin_2",
+                "name": "Slow-witted",
+                "confidence": 0.876
               },
               {
-                "icon_name": "chushen_shoulie_2",
-                "name": "Origin - Obsessed with Hunting",
-                "confidence": 0.877
+                "icon_name": "tianfu_jimin",
+                "name": "Resourceful",
+                "confidence": 0.876
               },
               {
-                "icon_name": "chushen_shengcun_2",
-                "name": "Origin: Poor Survival I",
-                "confidence": 0.877
+                "icon_name": "tianfu_sheshoujiaobu",
+                "name": "Marksman Footstep",
+                "confidence": 0.876
               }
             ]
           },
@@ -9850,9 +9850,9 @@
                 "confidence": 0.855
               },
               {
-                "icon_name": "chushen_shoulie",
-                "name": "Origin - Hunting",
-                "confidence": 0.854
+                "icon_name": "tianfu_chuileiwuqishanghaitigao",
+                "name": "Hammer DMG Increase",
+                "confidence": 0.853
               }
             ]
           },
@@ -10383,24 +10383,24 @@
           },
           {
             "shape": "hex",
-            "selected": "chushen_shoulie_2",
-            "selected_name": "Origin - Obsessed with Hunting",
-            "confidence": 0.85,
+            "selected": "tianfu_silieshangkou",
+            "selected_name": "Tear Wound",
+            "confidence": 0.848,
             "candidates": [
               {
-                "icon_name": "chushen_shoulie_2",
-                "name": "Origin - Obsessed with Hunting",
-                "confidence": 0.85
-              },
-              {
-                "icon_name": "chushen_zongjiang_2",
-                "name": "Origin - Manual Warm-up",
-                "confidence": 0.849
-              },
-              {
-                "icon_name": "chushen_zongjiang",
-                "name": "Origin - Craftsman",
+                "icon_name": "tianfu_silieshangkou",
+                "name": "Tear Wound",
                 "confidence": 0.848
+              },
+              {
+                "icon_name": "tianfu_shengminghuifujiakuai-",
+                "name": "tianfu_shengminghuifujiakuai-",
+                "confidence": 0.847
+              },
+              {
+                "icon_name": "tianfu_tilihuifujiakuai",
+                "name": "Full Stamina",
+                "confidence": 0.846
               }
             ]
           }
@@ -10412,10 +10412,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.795,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.997,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.997
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -10425,11 +10430,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.791
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.785
               }
             ]
           },
@@ -11486,8 +11486,8 @@
                 "confidence": 0.843
               },
               {
-                "icon_name": "chushen_zongjiang_2",
-                "name": "Origin - Manual Warm-up",
+                "icon_name": "tianfu_podanzhongji",
+                "name": "Intimidating Strike",
                 "confidence": 0.842
               }
             ]
@@ -11777,10 +11777,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.8,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.952,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.952
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -11790,25 +11795,15 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.796
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.791
               }
             ]
           },
           {
             "shape": "shield",
-            "selected": "Icon_NG_BuLuo_HuoShi",
-            "selected_name": "Tribe - Power of Defense",
-            "confidence": 0.849,
+            "selected": "ChengHao_chuanfeizhe",
+            "selected_name": "Lung Piercer",
+            "confidence": 0.848,
             "candidates": [
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.849
-              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -11818,6 +11813,11 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.846
+              },
+              {
+                "icon_name": "ChengHao_wuweizhe",
+                "name": "The Dauntless",
+                "confidence": 0.845
               }
             ]
           },
@@ -11994,13 +11994,13 @@
                 "confidence": 0.863
               },
               {
-                "icon_name": "chushen_kuli_2",
-                "name": "Origin - Work Warm-up",
-                "confidence": 0.862
-              },
-              {
                 "icon_name": "tianfu_yingpikangdaji",
                 "name": "Hardened Skin - Anti-Blunt Strike",
+                "confidence": 0.861
+              },
+              {
+                "icon_name": "tianfu_shuangdaowuqishanghaitigao",
+                "name": "Dual-blade DMG Increase",
                 "confidence": 0.861
               }
             ]
@@ -12272,10 +12272,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.799,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.952,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.952
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -12285,11 +12290,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.795
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.789
               }
             ]
           },
@@ -12318,24 +12318,24 @@
           },
           {
             "shape": "shield",
-            "selected": "Icon_NG_BuLuo_HuoShi",
-            "selected_name": "Tribe - Power of Defense",
-            "confidence": 0.831,
+            "selected": "ChengHao_eyunzhe",
+            "selected_name": "Fate-Choker",
+            "confidence": 0.826,
             "candidates": [
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.831
-              },
-              {
-                "icon_name": "ChengHao_jianshudashi",
-                "name": "Archery Master",
-                "confidence": 0.828
-              },
               {
                 "icon_name": "ChengHao_eyunzhe",
                 "name": "Fate-Choker",
                 "confidence": 0.826
+              },
+              {
+                "icon_name": "Icon_NG_BuLuo_LiZhua",
+                "name": "Tribe - Power of Erosion",
+                "confidence": 0.825
+              },
+              {
+                "icon_name": "ChengHao_poxiangren",
+                "name": "Chest Breaker",
+                "confidence": 0.824
               }
             ]
           },
@@ -12659,10 +12659,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.795,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.91,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.91
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -12672,11 +12677,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.789
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.785
               }
             ]
           },
@@ -13148,46 +13148,46 @@
           },
           {
             "shape": "hex",
-            "selected": "chushen_kuli_2",
-            "selected_name": "Origin - Work Warm-up",
-            "confidence": 0.865,
+            "selected": "tianfu_kangjie_2",
+            "selected_name": "Prone to Hunger",
+            "confidence": 0.863,
             "candidates": [
               {
-                "icon_name": "chushen_kuli_2",
-                "name": "Origin - Work Warm-up",
-                "confidence": 0.865
+                "icon_name": "tianfu_kangjie_2",
+                "name": "Prone to Hunger",
+                "confidence": 0.863
               },
               {
-                "icon_name": "chushen_kuli",
-                "name": "Origin - Laborer",
-                "confidence": 0.865
+                "icon_name": "tianfu_kangjie",
+                "name": "Anti-Hunger",
+                "confidence": 0.863
               },
               {
-                "icon_name": "chushen_shengcun",
-                "name": "Origin: Survivor",
-                "confidence": 0.864
+                "icon_name": "tianfu_tilihuifujiakuai",
+                "name": "Full Stamina",
+                "confidence": 0.863
               }
             ]
           },
           {
             "shape": "hex",
-            "selected": "chushen_shoulie_2",
-            "selected_name": "Origin - Obsessed with Hunting",
+            "selected": "tianfu__zuitaiganying",
+            "selected_name": "Drunken Senses",
             "confidence": 0.843,
             "candidates": [
               {
-                "icon_name": "chushen_shoulie_2",
-                "name": "Origin - Obsessed with Hunting",
-                "confidence": 0.843
-              },
-              {
-                "icon_name": "chushen_shoulie",
-                "name": "Origin - Hunting",
-                "confidence": 0.843
-              },
-              {
                 "icon_name": "tianfu__zuitaiganying",
                 "name": "Drunken Senses",
+                "confidence": 0.843
+              },
+              {
+                "icon_name": "tianfu_shemingxiangbo",
+                "name": "Fight to Death",
+                "confidence": 0.843
+              },
+              {
+                "icon_name": "tianfu__zhihuanzhidu",
+                "name": "Stagnating Toxin",
                 "confidence": 0.843
               }
             ]
@@ -13223,10 +13223,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.797,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.997,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.997
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -13236,11 +13241,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.793
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.787
               }
             ]
           },
@@ -13712,23 +13712,23 @@
           },
           {
             "shape": "hex",
-            "selected": "chushen_kuli_2",
-            "selected_name": "Origin - Work Warm-up",
-            "confidence": 0.82,
+            "selected": "tianfu_fangyutisheng_2",
+            "selected_name": "Weakened DEF",
+            "confidence": 0.818,
             "candidates": [
               {
-                "icon_name": "chushen_kuli_2",
-                "name": "Origin - Work Warm-up",
-                "confidence": 0.82
-              },
-              {
-                "icon_name": "chushen_kuli",
-                "name": "Origin - Laborer",
-                "confidence": 0.82
+                "icon_name": "tianfu_fangyutisheng_2",
+                "name": "Weakened DEF",
+                "confidence": 0.818
               },
               {
                 "icon_name": "tianfu_fangyutisheng",
                 "name": "Enhance DEF",
+                "confidence": 0.818
+              },
+              {
+                "icon_name": "tianfu_maoleiwuqishanghaitigao",
+                "name": "Spear DMG Increase",
                 "confidence": 0.818
               }
             ]
@@ -13741,10 +13741,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.794,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.856,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.856
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -13754,11 +13759,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.787
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.782
               }
             ]
           },
@@ -14144,10 +14144,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.812,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.881,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.881
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -14157,11 +14162,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.804
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.8
               }
             ]
           },
@@ -14351,15 +14351,10 @@
           },
           {
             "shape": "hex",
-            "selected": "tianfu_zhongjianwuqishanghaitigao_2",
-            "selected_name": "Giant Sword DMG Reduction",
+            "selected": "tianfu_zhongjianwuqishanghaitigao",
+            "selected_name": "Giant Sword DMG Increase",
             "confidence": 0.823,
             "candidates": [
-              {
-                "icon_name": "tianfu_zhongjianwuqishanghaitigao_2",
-                "name": "Giant Sword DMG Reduction",
-                "confidence": 0.823
-              },
               {
                 "icon_name": "tianfu_zhongjianwuqishanghaitigao",
                 "name": "Giant Sword DMG Increase",
@@ -14368,6 +14363,11 @@
               {
                 "icon_name": "tianfu_sheshoujiaobu",
                 "name": "Marksman Footstep",
+                "confidence": 0.822
+              },
+              {
+                "icon_name": "tianfu_chuileiwuqishanghaitigao",
+                "name": "Hammer DMG Increase",
                 "confidence": 0.822
               }
             ]
@@ -14397,37 +14397,37 @@
           },
           {
             "shape": "hex",
-            "selected": "chushen_zagong_2",
-            "selected_name": "Origin - Chore Warm-up",
+            "selected": "tianfu_zhongjianwuqishanghaitigao_2",
+            "selected_name": "Giant Sword DMG Reduction",
             "confidence": 0.869,
             "candidates": [
               {
-                "icon_name": "chushen_zagong_2",
-                "name": "Origin - Chore Warm-up",
-                "confidence": 0.869
-              },
-              {
-                "icon_name": "chushen_zagong",
-                "name": "Origin - Porter",
+                "icon_name": "tianfu_zhongjianwuqishanghaitigao_2",
+                "name": "Giant Sword DMG Reduction",
                 "confidence": 0.869
               },
               {
                 "icon_name": "tianfu_zhongjianwuqishanghaitigao",
                 "name": "Giant Sword DMG Increase",
                 "confidence": 0.869
+              },
+              {
+                "icon_name": "tianfu_datuiyingji",
+                "name": "Thigh Stress Response",
+                "confidence": 0.868
               }
             ]
           },
           {
             "shape": "hex",
-            "selected": "chushen_kuli_2",
-            "selected_name": "Origin - Work Warm-up",
-            "confidence": 0.835,
+            "selected": "tianfu_shuangdaowuqishanghaitigao_2",
+            "selected_name": "Dual-blade DMG Reduction",
+            "confidence": 0.833,
             "candidates": [
               {
-                "icon_name": "chushen_kuli_2",
-                "name": "Origin - Work Warm-up",
-                "confidence": 0.835
+                "icon_name": "tianfu_shuangdaowuqishanghaitigao_2",
+                "name": "Dual-blade DMG Reduction",
+                "confidence": 0.833
               },
               {
                 "icon_name": "tianfu_shuangdaowuqishanghaitigao",
@@ -14685,10 +14685,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.798,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.918,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.918
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -14698,11 +14703,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.794
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.789
               }
             ]
           },
@@ -14741,13 +14741,13 @@
                 "confidence": 0.848
               },
               {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.848
-              },
-              {
                 "icon_name": "ChengHao_songzangzhe",
                 "name": "Death Bringer",
+                "confidence": 0.847
+              },
+              {
+                "icon_name": "ChengHao_chuanfeizhe",
+                "name": "Lung Piercer",
                 "confidence": 0.847
               }
             ]
@@ -15128,15 +15128,10 @@
           },
           {
             "shape": "hex",
-            "selected": "chushen_kuli_2",
-            "selected_name": "Origin - Work Warm-up",
+            "selected": "tianfu_silieshangkou",
+            "selected_name": "Tear Wound",
             "confidence": 0.826,
             "candidates": [
-              {
-                "icon_name": "chushen_kuli_2",
-                "name": "Origin - Work Warm-up",
-                "confidence": 0.826
-              },
               {
                 "icon_name": "tianfu_silieshangkou",
                 "name": "Tear Wound",
@@ -15146,6 +15141,11 @@
                 "icon_name": "tianfu__zhuiguzhishang",
                 "name": "Bone-gnawing Wound",
                 "confidence": 0.825
+              },
+              {
+                "icon_name": "tianfu_jiasuroupi",
+                "name": "Accelerate leatherworking",
+                "confidence": 0.824
               }
             ]
           }
@@ -15780,24 +15780,24 @@
           },
           {
             "shape": "shield",
-            "selected": "ChengHao_buxingzhe",
-            "selected_name": "Unlucky One",
-            "confidence": 0.825,
+            "selected": "chushen_shengcun_2",
+            "selected_name": "Origin: Poor Survival I",
+            "confidence": 0.826,
             "candidates": [
+              {
+                "icon_name": "chushen_shengcun_2",
+                "name": "Origin: Poor Survival I",
+                "confidence": 0.826
+              },
+              {
+                "icon_name": "chushen_shengcun",
+                "name": "Origin: Survivor",
+                "confidence": 0.826
+              },
               {
                 "icon_name": "ChengHao_buxingzhe",
                 "name": "Unlucky One",
                 "confidence": 0.825
-              },
-              {
-                "icon_name": "ChengHao_xihaonengshou",
-                "name": "Skilled Work Expert",
-                "confidence": 0.824
-              },
-              {
-                "icon_name": "ChengHao_laodongkuangren",
-                "name": "Mad Worker",
-                "confidence": 0.823
               }
             ]
           },
@@ -15934,14 +15934,14 @@
                 "confidence": 0.77
               },
               {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.766
+              },
+              {
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.763
-              },
-              {
-                "icon_name": "ChengHao_zhongtiannengshou",
-                "name": "Farming Expert",
-                "confidence": 0.76
               }
             ]
           },
@@ -16313,8 +16313,8 @@
                 "confidence": 0.83
               },
               {
-                "icon_name": "chushen_bodou",
-                "name": "Origin - Fighting",
+                "icon_name": "tianfu_bikaiyaohai",
+                "name": "Avoid Vitals",
                 "confidence": 0.829
               }
             ]
@@ -16776,10 +16776,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.79,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.814,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.814
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -16789,11 +16794,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.781
-              },
-              {
-                "icon_name": "ChengHao_zhongtiannengshou",
-                "name": "Farming Expert",
-                "confidence": 0.777
               }
             ]
           },
@@ -17355,8 +17355,8 @@
                 "confidence": 0.855
               },
               {
-                "icon_name": "chushen_shoulie",
-                "name": "Origin - Hunting",
+                "icon_name": "tianfu_chuileiwuqishanghaitigao",
+                "name": "Hammer DMG Increase",
                 "confidence": 0.853
               }
             ]
@@ -17589,10 +17589,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.784,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.831,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.831
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -17602,11 +17607,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.779
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.776
               }
             ]
           },
@@ -18130,10 +18130,15 @@
         "traits": [
           {
             "shape": "shield",
-            "selected": "ChengHao_chuanfeizhe",
-            "selected_name": "Lung Piercer",
-            "confidence": 0.795,
+            "selected": "Icon_NG_BuLuo_HuoShi",
+            "selected_name": "Tribe - Power of Defense",
+            "confidence": 0.998,
             "candidates": [
+              {
+                "icon_name": "Icon_NG_BuLuo_HuoShi",
+                "name": "Tribe - Power of Defense",
+                "confidence": 0.998
+              },
               {
                 "icon_name": "ChengHao_chuanfeizhe",
                 "name": "Lung Piercer",
@@ -18143,11 +18148,6 @@
                 "icon_name": "ChengHao_jianshudashi",
                 "name": "Archery Master",
                 "confidence": 0.79
-              },
-              {
-                "icon_name": "Icon_NG_BuLuo_HuoShi",
-                "name": "Tribe - Power of Defense",
-                "confidence": 0.785
               }
             ]
           },
@@ -18458,24 +18458,24 @@
           },
           {
             "shape": "shield",
-            "selected": "Icon_NG_BuLuo_xingcunzhe",
-            "selected_name": "Tribe - Survivor",
-            "confidence": 0.804,
+            "selected": "chushen_shoulie_2",
+            "selected_name": "Origin - Obsessed with Hunting",
+            "confidence": 0.819,
             "candidates": [
               {
-                "icon_name": "Icon_NG_BuLuo_xingcunzhe",
-                "name": "Tribe - Survivor",
-                "confidence": 0.804
+                "icon_name": "chushen_shoulie_2",
+                "name": "Origin - Obsessed with Hunting",
+                "confidence": 0.819
               },
               {
-                "icon_name": "ChengHao_shougongnengren",
-                "name": "Expert Craftsman",
-                "confidence": 0.804
+                "icon_name": "chushen_shengcun_2",
+                "name": "Origin: Poor Survival I",
+                "confidence": 0.819
               },
               {
-                "icon_name": "ChengHao_linzhongtufu",
-                "name": "Butcher In Woods",
-                "confidence": 0.804
+                "icon_name": "chushen_shoulie",
+                "name": "Origin - Hunting",
+                "confidence": 0.818
               }
             ]
           },
