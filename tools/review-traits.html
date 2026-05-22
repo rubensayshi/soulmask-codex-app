@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trait review</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --card: #222244;
+    --border: #333366;
+    --text: #e0e0e0;
+    --muted: #888;
+    --green: #5BC477;
+    --teal: #327D7B;
+    --gold: #d4a843;
+    --red: #c0392b;
+    --hex-color: #5BC477;
+    --shield-color: #d4a843;
+    --other-color: #888;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Eina 04", "Helvetica Neue", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .stats { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .stats span { color: var(--green); font-weight: 600; }
+
+  .toolbar {
+    display: flex; gap: 10px; margin-bottom: 20px; align-items: center;
+    flex-wrap: wrap;
+  }
+  .toolbar button {
+    padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+  }
+  .btn-export { background: var(--green); color: #1a1a2e; }
+  .btn-export:hover { background: #4aad66; }
+  .btn-filter { background: var(--card); color: var(--text); border: 1px solid var(--border) !important; }
+  .btn-filter.active { border-color: var(--teal) !important; background: #2a3a5a; }
+  .btn-skip { background: var(--card); color: var(--muted); border: 1px solid var(--border) !important; }
+  .btn-skip:hover { border-color: var(--red) !important; }
+  .search {
+    padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); font-size: 13px; flex: 1; min-width: 200px;
+  }
+  .search::placeholder { color: var(--muted); }
+
+  .capture-group { margin-bottom: 24px; }
+  .capture-header {
+    font-size: 13px; color: var(--muted); padding: 6px 12px;
+    background: #16162a; border-radius: 6px 6px 0 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tribesman {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; margin-bottom: 8px; overflow: hidden;
+  }
+  .tribesman-header {
+    padding: 10px 14px; display: flex; justify-content: space-between;
+    align-items: center; cursor: pointer; user-select: none;
+  }
+  .tribesman-header:hover { background: #2a2a4a; }
+  .tm-name { font-weight: 600; font-size: 15px; }
+  .tm-level { color: var(--muted); font-size: 13px; }
+  .tm-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    font-weight: 600;
+  }
+  .tm-badge.done { background: #1a3a2a; color: var(--green); }
+  .tm-badge.pending { background: #3a2a1a; color: var(--gold); }
+
+  .traits { padding: 0 14px 10px; }
+  .trait-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 0;
+    border-bottom: 1px solid #2a2a3a;
+  }
+  .trait-row:last-child { border-bottom: none; }
+  .trait-idx { width: 24px; text-align: right; color: var(--muted); font-size: 12px; }
+  .trait-shape {
+    font-size: 10px; font-weight: 700; padding: 2px 6px;
+    border-radius: 4px; width: 48px; text-align: center;
+    text-transform: uppercase;
+  }
+  .trait-shape.hex { background: #1a3a2a; color: var(--hex-color); }
+  .trait-shape.shield { background: #3a3020; color: var(--shield-color); }
+  .trait-shape.other { background: #2a2a2a; color: var(--other-color); }
+
+  .candidates { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+  .candidate {
+    padding: 4px 10px; border-radius: 4px; font-size: 13px;
+    cursor: pointer; border: 2px solid transparent;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .candidate:hover { border-color: var(--teal); }
+  .candidate.selected { border-color: var(--green); background: #1a3a2a; }
+  .candidate.top { background: #2a2a4a; }
+  .candidate:not(.top) { background: #1e1e36; color: #aaa; }
+  .candidate .conf {
+    font-size: 11px; color: var(--muted); font-weight: 600;
+  }
+  .candidate.selected .conf { color: var(--green); }
+
+  .wrong-input {
+    padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 12px;
+    width: 200px; display: none;
+  }
+  .wrong-input.visible { display: inline-block; }
+  .btn-wrong {
+    padding: 4px 8px; border-radius: 4px; border: 1px dashed var(--border);
+    background: none; color: var(--muted); font-size: 12px; cursor: pointer;
+  }
+  .btn-wrong:hover { border-color: var(--red); color: var(--red); }
+
+  .trait-status {
+    width: 20px; text-align: center; font-size: 14px;
+  }
+
+  .progress-bar {
+    height: 4px; background: var(--border); border-radius: 2px;
+    margin-bottom: 20px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--green); transition: width 0.3s;
+  }
+
+  .collapse-all {
+    color: var(--muted); font-size: 12px; cursor: pointer;
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+
+<h1>Trait review</h1>
+<div class="stats">
+  <span id="st-reviewed">0</span> / <span id="st-total">0</span> traits reviewed
+  &nbsp;·&nbsp; <span id="st-corrected">0</span> corrected
+  &nbsp;·&nbsp; <span id="st-tribesmen">0</span> tribesmen
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+<div class="toolbar">
+  <button class="btn-export" onclick="exportJSON()">Export JSON</button>
+  <button class="btn-filter" onclick="toggleFilter('pending')" id="flt-pending">Show unreviewed only</button>
+  <button class="btn-filter" onclick="toggleFilter('low')" id="flt-low">Low confidence only</button>
+  <input class="search" type="text" placeholder="Search tribesman name…" oninput="filterSearch(this.value)">
+  <span class="collapse-all" onclick="collapseAll()">collapse all</span>
+  <span class="collapse-all" onclick="expandAll()">expand all</span>
+</div>
+
+<div id="root"></div>
+
+<script>
+let DATA = [];
+let state = {};
+let filters = { pending: false, low: false, search: '' };
+
+function traitKey(capIdx, tmIdx, trIdx) {
+  return `${capIdx}:${tmIdx}:${trIdx}`;
+}
+
+function init(data) {
+  DATA = data;
+  state = {};
+  for (let ci = 0; ci < data.length; ci++) {
+    for (let ti = 0; ti < data[ci].tribesmen.length; ti++) {
+      for (let ri = 0; ri < data[ci].tribesmen[ti].traits.length; ri++) {
+        const tr = data[ci].tribesmen[ti].traits[ri];
+        const k = traitKey(ci, ti, ri);
+        // Auto-confirm high confidence (>= 95%)
+        if (tr.confidence >= 0.95) {
+          state[k] = { icon_name: tr.selected, name: tr.selected_name, auto: true };
+        }
+      }
+    }
+  }
+  render();
+}
+
+function render() {
+  const root = document.getElementById('root');
+  root.innerHTML = '';
+  let totalTraits = 0, reviewed = 0, corrected = 0, totalTm = 0;
+
+  for (let ci = 0; ci < DATA.length; ci++) {
+    const cap = DATA[ci];
+    const groupEl = document.createElement('div');
+    groupEl.className = 'capture-group';
+
+    let capHasVisible = false;
+
+    for (let ti = 0; ti < cap.tribesmen.length; ti++) {
+      const tm = cap.tribesmen[ti];
+      totalTm++;
+      if (filters.search && !tm.name.toLowerCase().includes(filters.search.toLowerCase())) continue;
+
+      let tmReviewed = 0, tmTotal = tm.traits.length, tmCorrected = 0;
+      let hasLow = false;
+
+      for (let ri = 0; ri < tm.traits.length; ri++) {
+        const k = traitKey(ci, ti, ri);
+        totalTraits++;
+        if (state[k]) {
+          reviewed++;
+          tmReviewed++;
+          if (state[k].icon_name !== tm.traits[ri].selected) { corrected++; tmCorrected++; }
+        }
+        if (tm.traits[ri].confidence < 0.85) hasLow = true;
+      }
+
+      if (filters.pending && tmReviewed === tmTotal) continue;
+      if (filters.low && !hasLow) continue;
+
+      capHasVisible = true;
+      const tmEl = document.createElement('div');
+      tmEl.className = 'tribesman';
+      tmEl.id = `tm-${ci}-${ti}`;
+
+      const isDone = tmReviewed === tmTotal;
+      tmEl.innerHTML = `
+        <div class="tribesman-header" onclick="toggleTm(${ci},${ti})">
+          <div>
+            <span class="tm-name">${esc(tm.name)}</span>
+            <span class="tm-level">Lv${tm.level ?? '?'} · ${tmTotal} traits</span>
+          </div>
+          <span class="tm-badge ${isDone ? 'done' : 'pending'}">${tmReviewed}/${tmTotal}${tmCorrected ? ' · ' + tmCorrected + ' fixed' : ''}</span>
+        </div>
+        <div class="traits" id="traits-${ci}-${ti}" style="display:none">
+          ${tm.traits.map((tr, ri) => renderTrait(ci, ti, ri, tr)).join('')}
+        </div>
+      `;
+      groupEl.appendChild(tmEl);
+    }
+
+    if (capHasVisible) {
+      const header = document.createElement('div');
+      header.className = 'capture-header';
+      header.textContent = cap.capture + ' · ' + cap.cards_found + ' cards';
+      groupEl.insertBefore(header, groupEl.firstChild);
+      root.appendChild(groupEl);
+    }
+  }
+
+  document.getElementById('st-reviewed').textContent = reviewed;
+  document.getElementById('st-total').textContent = totalTraits;
+  document.getElementById('st-corrected').textContent = corrected;
+  document.getElementById('st-tribesmen').textContent = totalTm;
+  document.getElementById('progress').style.width = totalTraits ? (reviewed / totalTraits * 100) + '%' : '0%';
+}
+
+function renderTrait(ci, ti, ri, tr) {
+  const k = traitKey(ci, ti, ri);
+  const sel = state[k];
+  const statusIcon = sel ? (sel.auto ? '·' : '✓') : '';
+  const statusColor = sel ? (sel.icon_name !== tr.selected ? 'color:var(--gold)' : 'color:var(--green)') : '';
+
+  return `<div class="trait-row">
+    <span class="trait-idx">${ri + 1}</span>
+    <span class="trait-shape ${tr.shape}">${tr.shape}</span>
+    <div class="candidates">
+      ${tr.candidates.map((c, idx) => {
+        const isTop = idx === 0;
+        const isSel = sel && sel.icon_name === c.icon_name;
+        return `<div class="candidate ${isTop ? 'top' : ''} ${isSel ? 'selected' : ''}"
+                  onclick="pick(${ci},${ti},${ri},'${esc_attr(c.icon_name)}','${esc_attr(c.name)}')"
+                  title="${esc_attr(c.icon_name)}">
+          ${esc(c.name)}
+          <span class="conf">${Math.round(c.confidence * 100)}%</span>
+        </div>`;
+      }).join('')}
+      <button class="btn-wrong" onclick="showWrong(${ci},${ti},${ri})" title="None correct — type the right name">✗</button>
+      <input class="wrong-input" id="wrong-${ci}-${ti}-${ri}"
+        placeholder="icon_name…"
+        onkeydown="if(event.key==='Enter')pickCustom(${ci},${ti},${ri},this.value)">
+    </div>
+    <span class="trait-status" style="${statusColor}">${statusIcon}</span>
+  </div>`;
+}
+
+function pick(ci, ti, ri, iconName, name) {
+  state[traitKey(ci, ti, ri)] = { icon_name: iconName, name: name, auto: false };
+  render();
+  reopenTm(ci, ti);
+}
+
+function showWrong(ci, ti, ri) {
+  const el = document.getElementById(`wrong-${ci}-${ti}-${ri}`);
+  el.classList.toggle('visible');
+  if (el.classList.contains('visible')) el.focus();
+}
+
+function pickCustom(ci, ti, ri, value) {
+  if (!value.trim()) return;
+  state[traitKey(ci, ti, ri)] = { icon_name: value.trim(), name: value.trim(), auto: false, custom: true };
+  render();
+  reopenTm(ci, ti);
+}
+
+function toggleTm(ci, ti) {
+  const el = document.getElementById(`traits-${ci}-${ti}`);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function reopenTm(ci, ti) {
+  const el = document.getElementById(`traits-${ci}-${ti}`);
+  if (el) el.style.display = 'block';
+}
+
+function collapseAll() {
+  document.querySelectorAll('.traits').forEach(el => el.style.display = 'none');
+}
+function expandAll() {
+  document.querySelectorAll('.traits').forEach(el => el.style.display = 'block');
+}
+
+function toggleFilter(name) {
+  filters[name] = !filters[name];
+  document.getElementById(`flt-${name}`).classList.toggle('active', filters[name]);
+  render();
+}
+
+function filterSearch(val) {
+  filters.search = val;
+  render();
+}
+
+function exportJSON() {
+  const result = [];
+  for (let ci = 0; ci < DATA.length; ci++) {
+    const cap = DATA[ci];
+    const capResult = { capture: cap.capture, file: cap.file, tribesmen: [] };
+    for (let ti = 0; ti < cap.tribesmen.length; ti++) {
+      const tm = cap.tribesmen[ti];
+      const tmResult = { name: tm.name, level: tm.level, traits: [] };
+      for (let ri = 0; ri < tm.traits.length; ri++) {
+        const k = traitKey(ci, ti, ri);
+        const sel = state[k];
+        const tr = tm.traits[ri];
+        tmResult.traits.push({
+          shape: tr.shape,
+          icon_name: sel ? sel.icon_name : tr.selected,
+          name: sel ? sel.name : tr.selected_name,
+          original_icon_name: tr.selected,
+          was_corrected: sel ? sel.icon_name !== tr.selected : false,
+          was_reviewed: !!sel && !sel.auto,
+          confidence: tr.confidence,
+        });
+      }
+      capResult.tribesmen.push(tmResult);
+    }
+    result.push(capResult);
+  }
+  const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'trait-review.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function esc_attr(s) { return s.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+// Load data
+fetch('./review-data.json')
+  .then(r => r.json())
+  .then(init)
+  .catch(e => {
+    document.getElementById('root').innerHTML = `<p style="color:var(--red)">Failed to load review-data.json: ${e.message}</p>
+    <p style="color:var(--muted)">Make sure review-data.json is in the same directory as this HTML file.</p>`;
+  });
+</script>
+</body>
+</html>
