@@ -45,7 +45,7 @@ def _normalize_ranked(ranked: list[tuple[str, float]]) -> list[tuple[str, float]
 def _icon_shape(name: str) -> str:
     if name.startswith("Icon_NG_XiHao") or name.startswith("Icon_NG_XingGe"):
         return "diamond"
-    if name.startswith("Icon_NG_BuLuo") or name.startswith("ChengHao") or name.startswith("Icon_NG_JingLi"):
+    if name.startswith("Icon_NG_BuLuo") or name.startswith("ChengHao") or name.startswith("Icon_NG_JingLi") or name.startswith("chushen_"):
         return "shield"
     return "hexagon"
 
