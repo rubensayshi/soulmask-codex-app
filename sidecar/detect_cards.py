@@ -24,8 +24,8 @@ class Card:
 # Tuned against 889×140 card crops from 2000×1121 fixture.
 LAYOUT = {
     "name":       {"x": 0.03, "y": 0.08, "w": 0.22, "h": 0.25},
-    "level_line": {"x": 0.01, "y": 0.40, "w": 0.50, "h": 0.14},
-    "trait_row":  {"x": 0.01, "y": 0.55, "w": 0.75, "h": 0.43},
+    "level_line": {"x": 0.01, "y": 0.42, "w": 0.50, "h": 0.16},
+    "trait_row":  {"x": 0.01, "y": 0.58, "w": 0.75, "h": 0.40},
     "status":     {"x": 0.78, "y": 0.43, "w": 0.19, "h": 0.15},
     "group":      {"x": 0.58, "y": 0.72, "w": 0.24, "h": 0.20},
 }
@@ -131,7 +131,9 @@ def _filter_by_gap(lines: list[int], h: int) -> list[int]:
     gaps = [merged[i + 1] - merged[i] for i in range(len(merged) - 1)]
     gaps_sorted = sorted(gaps, reverse=True)
     dominant_h = int(np.median(gaps_sorted[: max(len(gaps_sorted) // 2, 2)]))
-    min_card_h = int(dominant_h * 0.65)
+    # At higher resolutions (4K) internal card dividers can look like separators;
+    # enforce an image-height-based floor so they are never accepted as card boundaries.
+    min_card_h = max(int(dominant_h * 0.65), int(h * 0.08))
 
     def _sweep(pts: list[int], reverse: bool) -> list[int]:
         seq = list(reversed(pts)) if reverse else pts
