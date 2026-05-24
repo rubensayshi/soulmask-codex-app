@@ -23,6 +23,50 @@ class CardText:
     group: str | None
 
 
+def _mask_badge_icon(img: np.ndarray) -> np.ndarray:
+    """Detect and mask the colored badge icon (hexagon/diamond/shield) in the name crop.
+
+    The badge is a small, saturated, colored icon that appears after the name text.
+    Name text is white/light gray (low saturation), while the badge is distinctly
+    colored (green, purple, gold). We find the leftmost high-saturation column
+    in the right 60% of the crop and black out everything from there rightward.
+    """
+    if len(img.shape) != 3:
+        return img
+    h, w = img.shape[:2]
+    if w < 20 or h < 10:
+        return img
+
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    sat = hsv[:, :, 1]  # saturation channel
+    val = hsv[:, :, 2]  # value channel
+
+    # Only look in the right 55% of the crop (badge is always after some text)
+    search_start = int(w * 0.45)
+    # For each column, check if there's a significant saturated+bright region.
+    # Use strict thresholds to avoid catching semi-transparent card backgrounds.
+    result = img.copy()
+    badge_start = None
+    consecutive = 0
+    for x in range(search_start, w):
+        col_sat = sat[:, x]
+        col_val = val[:, x]
+        # Count pixels that are distinctly colored (high sat + brightness)
+        colored_pixels = np.sum((col_sat > 80) & (col_val > 80))
+        if colored_pixels >= h * 0.30:
+            consecutive += 1
+            if consecutive >= 3 and badge_start is None:  # need 3+ consecutive columns
+                badge_start = x - consecutive + 1
+        else:
+            consecutive = 0
+    if badge_start is not None:
+        # Add a small left margin to ensure we don't clip text
+        mask_start = max(search_start, badge_start - 3)
+        result[:, mask_start:] = 0
+
+    return result
+
+
 def preprocess_for_ocr(img: np.ndarray, threshold: int = 70, use_red: bool = False) -> np.ndarray:
     """Upscale and binarize game UI text (light text on dark background)."""
     if use_red and len(img.shape) == 3:
@@ -63,12 +107,18 @@ def parse_name(text: str) -> str:
     text = re.sub(r'(?<=\S)\|(?=V)', ' I', text)
     text = re.sub(r'[|\u00ae\u00ab\u00bb\u00a9]', ' ', text)
 
+    # Replace non-ASCII characters with nothing (OCR encoding artifacts like ·, ü, etc.)
+    text = re.sub(r'[^\x20-\x7e]', '', text)
+    # Apostrophe between words without space is likely OCR noise: "Bepker'Bee" → "Bepker Bee"
+    text = re.sub(r"(?<=[a-zA-Z])'(?=[a-zA-Z])", ' ', text)
     text = re.sub(r'^[\u25c6\u25c7\u2666<>\[\]\u00a9\u00ae\u00b0\u2022\u00b7&@#%~*\-_\d\s\'\"\u2018\u2019\u201c\u201d()+:;,.!?/\\\u20ac{}]+', '', text)
-    text = re.sub(r'^[a-z&@#~*\-]\s+', '', text)
+    text = re.sub(r'^[a-z&@#~*\-]{1,4}\s+', '', text)
     text = re.sub(r'^x[a-z]?\s+', '', text, flags=re.IGNORECASE)
     # Strip single uppercase letter + space before a capitalized word (OCR bleed)
     # Exclude I/V/X which could be valid roman numeral starts
     text = re.sub(r'^[A-HJ-UW-Z]\s+(?=[A-Z][a-z])', '', text)
+    # Strip uppercase noise prefix (2-4 chars) before a capitalized word ("ABV Worker" → "Worker")
+    text = re.sub(r'^[A-Z]{2,4}\s+(?=[A-Z][a-z])', '', text)
 
     text = re.sub(r'\bl(?=[A-Z])', 'I', text)
     text = re.sub(r'^[A-Z](?=[A-Z][a-z])', '', text)
@@ -161,7 +211,12 @@ def _score_name(name: str) -> int:
     score -= max(0, len(words) - 3) * 15
     score += sum(3 for w in words if w and w[0].isupper())
     score -= sum(5 for w in words if w and w[0].islower() and w not in ('of', 'the', 'and', 'in'))
-    score -= sum(3 for c in name if not c.isalpha() and c != ' ')
+    # Penalize non-alpha characters; non-ASCII artifacts (encoding garbage) are much worse
+    for c in name:
+        if c == ' ':
+            continue
+        if not c.isalpha():
+            score -= 10 if not c.isascii() else 3
     for w in words:
         if w.isupper() and len(w) >= 2 and w not in _VALID_ROMAN_SET:
             score -= 12
@@ -521,7 +576,7 @@ def extract_card_text(card_img: np.ndarray) -> CardText:
     # Name: white text — try multiple thresholds and pick best result
     name_img = crop_region(card_img, "name")
     name_candidates = []
-    for t in [90, 110, 130]:
+    for t in [90, 100, 110, 120, 130]:
         name_candidates.append(parse_name(ocr_region(name_img, psm=7, threshold=t)))
     name_candidates.append(parse_name(ocr_region(name_img, psm=7, threshold=120, use_red=True)))
     scored = [(c, _score_name(c)) for c in name_candidates]

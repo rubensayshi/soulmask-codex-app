@@ -51,6 +51,10 @@ def detect_cards(img: np.ndarray) -> list[Card]:
     cards = [c for c in cards if c.w > 100 and c.h > 50]
     # Cards touching the bottom edge are likely UI chrome, not real cards
     cards = [c for c in cards if c.y + c.h < h - 10]
+    # Cards touching the top edge are likely the header/tab bar, not real cards
+    # Only apply for game-resolution images (1000+ px tall)
+    if h >= 1000:
+        cards = [c for c in cards if c.y > h * 0.07]
     # In expanded view, the first row is often the header/filter bar.
     # Drop rows whose height is < 85% of the tallest card.
     if cards:
