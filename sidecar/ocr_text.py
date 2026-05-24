@@ -113,6 +113,12 @@ def parse_name(text: str) -> str:
     text = re.sub(r"(?<=[a-zA-Z])'(?=[a-zA-Z])", ' ', text)
     # Split CamelCase: "ExChef" \u2192 "Ex Chef" (but not ALL CAPS or roman like "VII")
     text = re.sub(r'(?<=[a-z])(?=[A-Z][a-z])', ' ', text)
+    # Fix OCR stutter at word start: "Iitem" \u2192 "Item"
+    words = text.split()
+    for idx, w in enumerate(words):
+        if len(w) >= 3 and w[0].isupper() and w[1].islower() and w[0].lower() == w[1]:
+            words[idx] = w[0] + w[2:]  # keep the uppercase, drop the duplicate lowercase
+    text = ' '.join(words)
     text = re.sub(r'^[\u25c6\u25c7\u2666<>\[\]\u00a9\u00ae\u00b0\u2022\u00b7&@#%~*\-_\d\s\'\"\u2018\u2019\u201c\u201d()+:;,.!?/\\\u20ac{}]+', '', text)
     text = re.sub(r'^[a-z&@#~*\-]{1,4}\s+', '', text)
     text = re.sub(r'^x[a-z]?\s+', '', text, flags=re.IGNORECASE)
@@ -182,6 +188,9 @@ def parse_name(text: str) -> str:
     text = re.sub(r'(?<=\s)Vili\b', 'VIII', text)
     text = re.sub(r'(?<=\s)li\b', 'II', text)
     text = re.sub(r'(?<=\s)lil\b', 'III', text)
+    # Fix garbled X-based romans: "XIl" → "XII", "Xl" → "XI"
+    text = re.sub(r'(?<=\s)X[Ii]l\b', 'XII', text)
+    text = re.sub(r'(?<=\s)Xl\b', 'XI', text)
     text = re.sub(r'(?<=\s)LX\b', 'IX', text)
     text = re.sub(r'VUL\b', 'VIII', text)
     text = re.sub(r'(?<=\s)Vir\b', 'VIII', text)
@@ -460,7 +469,7 @@ _CLASS_WORD_FIXES = {
     "guaid": "Guard", "gnard": "Guard", "guad": "Guard",
     "craltsman": "Craftsman", "craftman": "Craftsman",
     "craftsmah": "Craftsman", "cfgsgnan": "Craftsman",
-    "itimler": "Hunter", "bnler": "Hunter",
+    "itimler": "Hunter", "bnler": "Hunter", "ihmler": "Hunter",
     "noyjge": "Novice", "novige": "Novice", "novjce": "Novice",
     "masigr": "Master", "magigr": "Master", "masler": "Master",
     "skiled": "Skilled", "skiiled": "Skilled",
