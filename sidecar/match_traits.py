@@ -19,10 +19,12 @@ NONHEX_CONFIDENCE_THRESHOLD = 0.55
 _COLOR_TO_SHAPE = {"green": "hexagon", "gold": "shield", "purple": "diamond"}
 
 import re
+_STAR_SUFFIX = re.compile(r'_s[123]$')
 _VARIANT_SUFFIX = re.compile(r'_(\d+)$')
 
 def _normalize_icon_name(name: str) -> str:
-    """Strip atlas variant suffixes (_2, _3, …) that aren't real trait IDs."""
+    """Strip atlas variant suffixes (_s1/_s2/_s3 star, _2/_3 dedup)."""
+    name = _STAR_SUFFIX.sub('', name)
     m = _VARIANT_SUFFIX.search(name)
     if not m:
         return name
@@ -136,11 +138,12 @@ def split_atlas_by_shape(atlas: dict[str, np.ndarray], neg_map: dict[str, str] |
     red: dict[str, dict[str, np.ndarray]] = {"hexagon": {}, "diamond": {}, "shield": {}}
     neg_names = set(neg_map.values()) if neg_map else set()
     for name, img in atlas.items():
-        if name in neg_names:
-            shape = _icon_shape(name)
+        base = _STAR_SUFFIX.sub('', name)
+        if base in neg_names:
+            shape = _icon_shape(base)
             red[shape][name] = img
             continue
-        shape = _icon_shape(name)
+        shape = _icon_shape(base)
         full[shape][name] = img
         cropped[shape][name] = _crop_interior(img)
     return ShapedAtlas(full=full, cropped=cropped, red=red, neg_map=neg_map or {})
