@@ -136,12 +136,9 @@ def split_atlas_by_shape(atlas: dict[str, np.ndarray], neg_map: dict[str, str] |
     red: dict[str, dict[str, np.ndarray]] = {"hexagon": {}, "diamond": {}, "shield": {}}
     neg_names = set(neg_map.values()) if neg_map else set()
     for name, img in atlas.items():
-        if name.endswith("_neg"):
-            base = name[:-4]
-            shape = _icon_shape(base)
-            red[shape][base] = img
-            continue
         if name in neg_names:
+            shape = _icon_shape(name)
+            red[shape][name] = img
             continue
         shape = _icon_shape(name)
         full[shape][name] = img

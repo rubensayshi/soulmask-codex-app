@@ -1,11 +1,36 @@
-"""Generate reference atlas: composite each trait icon onto its badge shape."""
-import json, os, sys, math
-from PIL import Image, ImageDraw
+"""Generate reference atlas: composite each trait icon onto its game badge shape."""
+import json, os
+from PIL import Image
 
-BADGE_COLORS = {
-    "hexagon": {"fill": (30, 42, 26), "stroke": (74, 106, 58)},
-    "diamond": {"fill": (46, 38, 64), "stroke": (138, 112, 176)},
-    "shield":  {"fill": (42, 37, 24), "stroke": (138, 122, 74)},
+SHAPES_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "shapes")
+ICONS_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "icons")
+
+SHAPE_FILES = {
+    ("hexagon", False):    "hexagon.png",
+    ("hexagon", True):     "hexagon_inactive.png",
+    ("diamond", False):    "diamond.png",
+    ("diamond", True):     "diamond_inactive.png",
+    ("shield", False):     "shield.png",
+    ("shield", True):      "shield_inactive.png",
+    ("shield_alt", False): "shield_alt.png",
+    ("shield_alt", True):  "shield_alt_inactive.png",
+}
+
+ICON_SCALE = {
+    "hexagon": 0.80,
+    "diamond": 0.80,
+    "shield": 0.80,
+    "shield_alt": 0.80,
+}
+
+SOURCE_TO_FOLDER = {
+    "Normal": "TianFu",
+    "XiHao": "xihao",
+    "XingGe": "xihao",
+    "ChengHao": "ChengHao",
+    "BornBuLuoCiTiao": "BuLuo",
+    "JingLi": "BuLuo",
+    "BornChuShen": "ChuShen",
 }
 
 
@@ -14,105 +39,113 @@ def source_to_badge_shape(source: str) -> str:
         return "hexagon"
     if source in ("XiHao", "XingGe"):
         return "diamond"
-    return "shield"
+    if source == "BornBuLuoCiTiao":
+        return "shield"
+    return "shield_alt"
 
 
-def _draw_hexagon(draw, size, fill, outline):
-    cx, cy = size / 2, size / 2
-    r = size * 0.46
-    pts = []
-    for i in range(6):
-        angle = math.radians(60 * i - 90)
-        pts.append((cx + r * math.cos(angle), cy + r * math.sin(angle)))
-    draw.polygon(pts, fill=outline)
-    inner_r = r * 0.88
-    inner_pts = []
-    for i in range(6):
-        angle = math.radians(60 * i - 90)
-        inner_pts.append((cx + inner_r * math.cos(angle), cy + inner_r * math.sin(angle)))
-    draw.polygon(inner_pts, fill=fill)
-
-
-def _draw_diamond(draw, size, fill, outline):
-    cx, cy = size / 2, size / 2
-    r = size * 0.46
-    pts = [(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)]
-    draw.polygon(pts, fill=outline)
-    inner_r = r * 0.88
-    inner_pts = [(cx, cy - inner_r), (cx + inner_r, cy), (cx, cy + inner_r), (cx - inner_r, cy)]
-    draw.polygon(inner_pts, fill=fill)
-
-
-def _draw_shield(draw, size, fill, outline):
-    cx = size / 2
-    r = size * 0.42
-    top_y = size * 0.12
-    mid_y = size * 0.55
-    bot_y = size * 0.90
-    pts = [
-        (cx, top_y), (cx + r, top_y + r * 0.4), (cx + r, mid_y),
-        (cx, bot_y), (cx - r, mid_y), (cx - r, top_y + r * 0.4),
-    ]
-    draw.polygon(pts, fill=outline)
-    s = 0.90
-    inner_pts = [(cx + (x - cx) * s, top_y + (y - top_y) * s + size * 0.02) for x, y in pts]
-    draw.polygon(inner_pts, fill=fill)
-
-
-_BADGE_DRAWERS = {
-    "hexagon": _draw_hexagon,
-    "diamond": _draw_diamond,
-    "shield": _draw_shield,
-}
-
-
-def composite_icon(icon_path: str, shape: str, size: int) -> Image.Image:
-    colors = BADGE_COLORS[shape]
-    badge = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(badge)
-    _BADGE_DRAWERS[shape](draw, size, colors["fill"] + (255,), colors["stroke"] + (255,))
+def composite_icon(icon_path: str, shape: str, negative: bool, size: int,
+                   star: int = 0) -> Image.Image:
+    shape_file = SHAPE_FILES[(shape, negative)]
+    badge = Image.open(os.path.join(SHAPES_DIR, shape_file)).convert("RGBA")
+    badge = badge.resize((size, size), Image.LANCZOS)
 
     icon = Image.open(icon_path).convert("RGBA")
-    icon_size = int(size * 0.6)
+    scale = ICON_SCALE.get(shape, 0.85)
+    icon_size = int(size * scale)
     icon = icon.resize((icon_size, icon_size), Image.LANCZOS)
     offset = (size - icon_size) // 2
     badge.paste(icon, (offset, offset), icon)
+
+    if 1 <= star <= 3:
+        star_img = Image.open(os.path.join(SHAPES_DIR, f"star_{star}.png")).convert("RGBA")
+        sw, sh = star_img.size
+        star_scale = size / 64.0
+        new_sw = max(int(sw * star_scale), 1)
+        new_sh = max(int(sh * star_scale), 1)
+        star_img = star_img.resize((new_sw, new_sh), Image.LANCZOS)
+        sx = (size - new_sw) // 2
+        sy = size - new_sh - max(int(size * 0.03), 1)
+        badge.paste(star_img, (sx, sy), star_img)
+
     return badge
 
 
-def build_atlas(traits_path: str, icons_dir: str, out_dir: str, size: int = 64) -> dict:
+def _find_icon(icon_name: str, source: str) -> str | None:
+    folder = SOURCE_TO_FOLDER.get(source)
+    if folder:
+        path = os.path.join(ICONS_DIR, folder, icon_name + ".png")
+        if os.path.exists(path):
+            return path
+    for folder in os.listdir(ICONS_DIR):
+        path = os.path.join(ICONS_DIR, folder, icon_name + ".png")
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def build_atlas(traits_path: str, out_dir: str, size: int = 64,
+                star_variants: bool = False) -> dict:
     with open(traits_path, encoding='utf-8') as f:
         traits = json.load(f)
 
-    icon_source = {}
-    for t in traits:
-        name = t.get("icon_name")
-        if name and name not in icon_source:
-            icon_source[name] = t["source"]
+    if star_variants:
+        entries: list[tuple[str, str, bool, int]] = []
+        seen: set[tuple[str, int]] = set()
+        for t in traits:
+            name = t.get("icon_name")
+            if not name:
+                continue
+            star = t.get("star", 1)
+            key = (name, star)
+            if key in seen:
+                continue
+            seen.add(key)
+            entries.append((name, t["source"], t.get("is_negative", False), star))
+    else:
+        icon_meta: dict[str, dict] = {}
+        for t in traits:
+            name = t.get("icon_name")
+            if not name or name in icon_meta:
+                continue
+            icon_meta[name] = {
+                "source": t["source"],
+                "negative": t.get("is_negative", False),
+            }
+        entries = [(n, m["source"], m["negative"], 0) for n, m in icon_meta.items()]
 
     os.makedirs(out_dir, exist_ok=True)
     generated = 0
     missing = 0
-    for icon_name, source in icon_source.items():
-        icon_path = os.path.join(icons_dir, icon_name + ".webp")
-        if not os.path.exists(icon_path):
+    for icon_name, source, negative, star in entries:
+        icon_path = _find_icon(icon_name, source)
+        if not icon_path:
             missing += 1
             continue
         shape = source_to_badge_shape(source)
-        img = composite_icon(icon_path, shape, size)
-        img.save(os.path.join(out_dir, f"{icon_name}.png"))
+        img = composite_icon(icon_path, shape, negative, size, star)
+        suffix = f"_s{star}" if star_variants else ""
+        img.save(os.path.join(out_dir, f"{icon_name}{suffix}.png"))
         generated += 1
 
-    return {"generated": generated, "missing": missing, "total": len(icon_source)}
+    return {"generated": generated, "missing": missing, "total": len(entries)}
 
 
 if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser()
-    p.add_argument("--traits", default=os.path.join(os.path.dirname(__file__), "..", "Game", "Parsed", "traits.json"))
-    p.add_argument("--icons", default=os.path.join(os.path.dirname(__file__), "..", "Game", "Icons"))
+    p.add_argument("--traits", default=os.path.join(os.path.dirname(__file__), "..", "assets", "traits.json"))
     p.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "assets", "atlas"))
     p.add_argument("--size", type=int, default=64)
+    p.add_argument("--clean", action="store_true", help="Remove existing atlas PNGs before generating")
+    p.add_argument("--stars", action="store_true", help="Generate per-star-level variants")
     args = p.parse_args()
-    stats = build_atlas(args.traits, args.icons, args.out, args.size)
+
+    if args.clean and os.path.isdir(args.out):
+        import glob
+        for f in glob.glob(os.path.join(args.out, "*.png")):
+            os.remove(f)
+        print(f"Cleaned {args.out}")
+
+    stats = build_atlas(args.traits, args.out, args.size, star_variants=args.stars)
     print(f"Atlas: {stats['generated']} generated, {stats['missing']} missing icons, {stats['total']} total")
