@@ -111,18 +111,24 @@ def parse_name(text: str) -> str:
     text = re.sub(r'[^\x20-\x7e]', '', text)
     # Apostrophe between words without space is likely OCR noise: "Bepker'Bee" → "Bepker Bee"
     text = re.sub(r"(?<=[a-zA-Z])'(?=[a-zA-Z])", ' ', text)
+    # Split CamelCase: "ExChef" \u2192 "Ex Chef" (but not ALL CAPS or roman like "VII")
+    text = re.sub(r'(?<=[a-z])(?=[A-Z][a-z])', ' ', text)
     text = re.sub(r'^[\u25c6\u25c7\u2666<>\[\]\u00a9\u00ae\u00b0\u2022\u00b7&@#%~*\-_\d\s\'\"\u2018\u2019\u201c\u201d()+:;,.!?/\\\u20ac{}]+', '', text)
     text = re.sub(r'^[a-z&@#~*\-]{1,4}\s+', '', text)
     text = re.sub(r'^x[a-z]?\s+', '', text, flags=re.IGNORECASE)
     # Strip single uppercase letter + space before a capitalized word (OCR bleed)
-    # Exclude I/V/X which could be valid roman numeral starts
+    # Exclude V/X which could be valid roman numeral starts
     text = re.sub(r'^[A-HJ-UW-Z]\s+(?=[A-Z][a-z])', '', text)
+    # Strip leading "I" or "l" before a clearly non-roman word ("I Farmer" but not "I Viking")
+    text = re.sub(r'^[Il]\s+(?=[A-UW-Z][a-eg-z])', '', text)
     # Strip uppercase noise prefix (2-4 chars) before a capitalized word ("ABV Worker" → "Worker")
     text = re.sub(r'^[A-Z]{2,4}\s+(?=[A-Z][a-z])', '', text)
 
     text = re.sub(r'\bl(?=[A-Z])', 'I', text)
     text = re.sub(r'^[A-Z](?=[A-Z][a-z])', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
+    # Re-apply I/l-strip after l→I conversion ("l Farmer" → "I Farmer" → "Farmer")
+    text = re.sub(r'^[Il]\s+(?=[A-UW-Z][a-eg-z])', '', text)
 
     text = re.sub(r'\(X\b', 'IX', text)
     text = re.sub(r'\[V\b', 'IV', text)
@@ -134,6 +140,13 @@ def parse_name(text: str) -> str:
     text = re.sub(r'(?<=\s)Il\b', 'II', text)
     text = re.sub(r'(?<=\s)V[vu]\b', 'VII', text)
     text = re.sub(r'(?<=\s)lV\b', 'IV', text)
+
+    # Split glued roman numerals from end of words: "BeelV" → "Bee IV"
+    # Only match clear roman patterns (lV, lI+V, etc.), NOT standalone l/ll/lll
+    # which would falsely split words like "Final" → "Fina I"
+    text = re.sub(r'(?<=[a-z])(lV(?:II?I?)?|Il{1,2}|lI)(?=\s|$)',
+                  lambda m: ' ' + m.group(1).replace('l', 'I'), text)
+    text = re.sub(r'\s+', ' ', text).strip()
 
     words = text.split()
     while words:
@@ -164,6 +177,11 @@ def parse_name(text: str) -> str:
     text = re.sub(r'[Vv]ie\b', 'VI', text)
     text = re.sub(r'VIS\b', 'VI', text)
     text = re.sub(r'VL\b', 'VI', text)
+    text = re.sub(r'(?<=\s)Vi\b', 'VI', text)
+    text = re.sub(r'(?<=\s)Vil\b', 'VII', text)
+    text = re.sub(r'(?<=\s)Vili\b', 'VIII', text)
+    text = re.sub(r'(?<=\s)li\b', 'II', text)
+    text = re.sub(r'(?<=\s)lil\b', 'III', text)
     text = re.sub(r'(?<=\s)LX\b', 'IX', text)
     text = re.sub(r'VUL\b', 'VIII', text)
     text = re.sub(r'(?<=\s)Vir\b', 'VIII', text)
@@ -175,6 +193,9 @@ def parse_name(text: str) -> str:
     text = re.sub(r'\s+', ' ', text).strip()
 
     text = re.sub(r'(?<=\s)([IVX]{1,4})[^a-zA-Z\s]+\S*', r'\1', text)
+    # Strip garbled prefix on roman numerals: "UWLVI" → "VI" (only if
+    # the prefix contains non-roman chars like W,U,L mixed with I/V/X)
+    text = re.sub(r'(?<=\s)[A-Z]*[^IVX\s][A-Z]*(VIII|VII|VI|IX|IV|III|II)\b', r'\1', text)
 
     roman_suffix = ""
     rm = re.search(r'\s+(VIII|VII|VI|IX|IV|V|III|II|X|I)(?:\s|$)', text)
@@ -188,9 +209,16 @@ def parse_name(text: str) -> str:
     if not re.search(r'\s+[IVXL]{1,5}$', text):
         text = re.sub(r'\s+\S{1,2}$', '', text)
     text = re.sub(r'[&@#\d\s.,:;!?]+$', '', text)
+    # Strip trailing all-lowercase words (class/weapon text leaking into name)
+    # e.g. "Tanner sword. blade" \u2192 "Tanner"
+    text = re.sub(r'(\s+[a-z][a-z.,:;!?]*)+$', '', text)
     result = (text + roman_suffix).strip()
     if result and result[0] == 'l':
         result = 'I' + result[1:]
+    # Strip trailing single uppercase letter (OCR artifact, e.g. "YayaS" → "Yaya")
+    result = re.sub(r'(?<=[a-z])[A-Z]$', '', result)
+    # Fix roman numeral glued to previous word: "BeelV" → "Bee IV"
+    result = re.sub(r'(?<=[a-z])(VIII|VII|VI|IX|IV|III|II|lV|lI|Il)$', lambda m: ' ' + m.group(1).replace('l', 'I'), result)
     for bad, good in _NAME_FIXES:
         result = re.sub(bad, good, result)
     return result
@@ -427,9 +455,15 @@ _CLASS_WORD_FIXES = {
     "labore": "Laborer", "larborer": "Laborer",
     "wairior": "Warrior", "warri": "Warrior", "wantior": "Warrior",
     "wartior": "Warrior", "waniior": "Warrior", "warrion": "Warrior",
+    "wantion": "Warrior", "wafrir": "Warrior", "watridr": "Warrior",
+    "wgtribr": "Warrior", "watfior": "Warrior", "wattior": "Warrior",
     "guaid": "Guard", "gnard": "Guard", "guad": "Guard",
     "craltsman": "Craftsman", "craftman": "Craftsman",
-    "craftsmah": "Craftsman",
+    "craftsmah": "Craftsman", "cfgsgnan": "Craftsman",
+    "itimler": "Hunter", "bnler": "Hunter",
+    "noyjge": "Novice", "novige": "Novice", "novjce": "Novice",
+    "masigr": "Master", "magigr": "Master", "masler": "Master",
+    "skiled": "Skilled", "skiiled": "Skilled",
 }
 
 
