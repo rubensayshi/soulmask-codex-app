@@ -113,22 +113,36 @@ export function ReviewScreen({ onDone }: Props) {
                 transition: 'opacity 0.2s',
               }}
             >
-              {/* Crop placeholder */}
+              {/* Cropped icon */}
               <div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted)', letterSpacing: '0.08em', marginBottom: 4 }}>
                   ◆ {item.cropLabel}
                 </div>
-                <div
-                  className="grid place-items-center rounded"
-                  style={{
-                    height: 48,
-                    background: 'repeating-linear-gradient(45deg, oklch(0.20 0.012 130) 0 6px, oklch(0.16 0.008 130) 6px 12px)',
-                    border: '1px solid var(--color-border)',
-                    fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted)', letterSpacing: '0.06em',
-                  }}
-                >
-                  CROPPED REGION
-                </div>
+                {item.cropData ? (
+                  <img
+                    src={item.cropData}
+                    alt={item.cropLabel}
+                    className="rounded"
+                    style={{
+                      height: 48,
+                      objectFit: 'contain',
+                      border: '1px solid var(--color-border)',
+                      background: 'oklch(0.16 0.008 130)',
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="grid place-items-center rounded"
+                    style={{
+                      height: 48,
+                      background: 'repeating-linear-gradient(45deg, oklch(0.20 0.012 130) 0 6px, oklch(0.16 0.008 130) 6px 12px)',
+                      border: '1px solid var(--color-border)',
+                      fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted)', letterSpacing: '0.06em',
+                    }}
+                  >
+                    NO CROP
+                  </div>
+                )}
               </div>
 
               {/* Tribesman + options */}

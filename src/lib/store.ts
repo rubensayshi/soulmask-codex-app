@@ -14,7 +14,7 @@ interface RawTribesman {
   status?: string | null
   group?: string | null
   location?: string | null
-  traits?: Array<{ icon_name: string; confidence: number; alternatives?: Alternative[] }>
+  traits?: Array<{ icon_name: string; confidence: number; alternatives?: Alternative[]; crop_b64?: string }>
   prof?: number[]
 }
 
@@ -49,6 +49,7 @@ function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
       icon_name: t.icon_name,
       confidence: t.confidence,
       alternatives: t.alternatives,
+      crop_b64: t.crop_b64,
       id: info?.id ?? t.icon_name,
       name: info?.name ?? info?.name_zh ?? t.icon_name,
       shape: info?.shape ?? 'hexagon',
@@ -91,6 +92,7 @@ export interface ReviewItem {
   tribesmanName: string
   traitIndex: number
   cropLabel: string
+  cropData?: string
   field: 'trait'
   options: Array<{ id: string; name: string; pct: number }>
 }
@@ -260,6 +262,7 @@ export const useRosterStore = create<RosterState>((set) => ({
               tribesmanName: t.name,
               traitIndex: idx,
               cropLabel: `TRAIT ICON · ${idx + 1}`,
+              cropData: trait.crop_b64 ? `data:image/png;base64,${trait.crop_b64}` : undefined,
               field: 'trait',
               options,
             })

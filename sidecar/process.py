@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Main entry: image path -> JSON stdout. Called by Tauri as a sidecar."""
-import json, sys, os, argparse, traceback
+import json, sys, os, argparse, traceback, base64
 import cv2
 
 
@@ -24,6 +24,22 @@ def process_image(image_path: str, atlas_dir: str) -> dict:
             text = extract_card_text(card_img)
             trait_row = crop_region(card_img, "trait_row")
             matches = match_trait_row(trait_row, atlas, neg_map=neg_map) if atlas else []
+            traits_out = []
+            for m in matches:
+                t = {
+                    "icon_name": m.icon_name,
+                    "confidence": round(m.confidence, 3),
+                    "alternatives": [
+                        {"icon_name": n, "confidence": round(s, 3)}
+                        for n, s in m.alternatives
+                    ],
+                }
+                x, y, w, h = m.bbox
+                crop = trait_row[y:y+h, x:x+w]
+                if crop.size > 0:
+                    _, buf = cv2.imencode(".png", crop)
+                    t["crop_b64"] = base64.b64encode(buf).decode("ascii")
+                traits_out.append(t)
             tribesmen.append({
                 "name": text.name,
                 "level": text.level,
@@ -32,17 +48,7 @@ def process_image(image_path: str, atlas_dir: str) -> dict:
                 "title": text.title,
                 "status": text.status,
                 "group": text.group,
-                "traits": [
-                    {
-                        "icon_name": m.icon_name,
-                        "confidence": round(m.confidence, 3),
-                        "alternatives": [
-                            {"icon_name": n, "confidence": round(s, 3)}
-                            for n, s in m.alternatives
-                        ],
-                    }
-                    for m in matches
-                ],
+                "traits": traits_out,
                 "card_index": i,
             })
         except Exception as e:

@@ -13,6 +13,7 @@ export interface TraitMatch {
   icon_name: string
   confidence: number
   alternatives?: Alternative[]
+  crop_b64?: string
   id: string
   name: string
   shape: BadgeShape
