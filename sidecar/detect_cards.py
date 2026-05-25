@@ -106,6 +106,15 @@ def _find_horizontal_separators(gray: np.ndarray, w: int, h: int) -> list[int]:
     gaps = [midpoints[i + 1] - midpoints[i] for i in range(len(midpoints) - 1)]
     card_h = int(np.median(gaps))
 
+    # Sanity check: if there are many unpaired lines between pairs, the pairs
+    # are a subset of the real boundaries (e.g. lower-res images where not all
+    # card borders produce double-lines).  Fall back to gap-based filtering.
+    unpaired = [lines[i] for i in range(len(lines)) if i not in used]
+    between_count = sum(1 for y in unpaired
+                        if midpoints[0] < y < midpoints[-1])
+    if between_count >= len(pairs):
+        return _filter_by_gap(lines, h)
+
     above: list[int] = []
     y = midpoints[0] - card_h
     while y > 0:

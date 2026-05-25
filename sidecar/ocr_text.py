@@ -97,6 +97,14 @@ def ocr_region(img: np.ndarray, psm: int = 7, threshold: int = 70,
 _NAME_FIXES = [
     (r'^Sex\b', 'Ex'),
     (r'^Spy\b', 'Ex'),
+    (r'^Paster\b', 'Master'),
+    (r'^Baster\b', 'Master'),
+    (r'^Bester\b', 'Master'),
+    (r'^Waster\b', 'Master'),
+    (r'^Bvedition\b', 'Expedition'),
+    (r'^Bxpedition\b', 'Expedition'),
+    (r'^Biter\b', 'Master'),  # OCR: M→Bi with bad threshold
+    (r'^Etter\b', 'Master'),  # OCR: M→Et with bad threshold
     (r'\bGathererer\b', 'Gatherer'),
     (r'\bDefendert\b', 'Defender'),
 ]
@@ -595,11 +603,11 @@ def parse_group(text: str) -> str | None:
     text = text.strip()
     if not text or "(Ungrouped" in text:
         return None
-    # Strip leading and trailing OCR noise
-    text = re.sub(r'^[\s\d|\\\/\[\]:_~*\-\'\"(){}#@&<>‘’“”]+', '', text).strip()
-    text = re.sub(r"[\s▼▾↓vy~¥_|:;,.!?\d*#@&'\"‘’“”()]+$", "", text).strip()
-    # Strip leading "Ww) v4 |" style garbage: anything before a pipe followed by a word
-    text = re.sub(r'^.*\|\s*', '', text).strip()
+    # Replace non-alpha-space chars with space, then collapse
+    text = re.sub(r'[^a-zA-Z\s]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    # Strip leading single-char artifacts ("i Expedition" → "Expedition", "L Expedition" → "Expedition")
+    text = re.sub(r'^[a-zA-Z]\s+(?=[A-Z])', '', text).strip()
     # Strip trailing short OCR artifacts (dropdown arrows, noise)
     text = re.sub(r'\s+\S{1,3}$', '', text).strip()
     if text.upper() == text and len(text) > 3 and not any(c.islower() for c in text):
@@ -609,6 +617,17 @@ def parse_group(text: str) -> str | None:
     if all(len(w) <= 2 for w in words):
         return None
     if any(w.isupper() and len(w) >= 4 for w in words) and not any(c.islower() for c in text.replace(' ', '')):
+        return None
+    # Reject if too many non-alpha characters (garbled OCR noise)
+    alpha = sum(c.isalpha() for c in text)
+    total = len(text.replace(' ', ''))
+    if total > 0 and alpha / total < 0.7:
+        return None
+    # Reject if first word is all lowercase (likely garbled)
+    if words and words[0] == words[0].lower() and len(words[0]) > 1:
+        return None
+    # Reject if too short to be meaningful
+    if len(text) < 4:
         return None
     return text if text else None
 
@@ -623,7 +642,13 @@ def extract_card_text(card_img: np.ndarray) -> CardText:
         name_candidates.append(parse_name(ocr_region(name_img, psm=7, threshold=t)))
     name_candidates.append(parse_name(ocr_region(name_img, psm=7, threshold=120, use_red=True)))
     scored = [(c, _score_name(c)) for c in name_candidates]
-    name, best_score = max(scored, key=lambda x: x[1])
+    best_score = max(sc for _, sc in scored)
+    # Among tied top-scoring candidates, prefer the one that appears most often
+    # (voting across thresholds eliminates OCR flukes)
+    from collections import Counter
+    top_candidates = [c for c, sc in scored if sc == best_score]
+    top_counts = Counter(top_candidates)
+    name = top_counts.most_common(1)[0][0]
     for cand, sc in scored:
         if sc >= 10 and cand != name and name.startswith(cand + ' '):
             extra = name[len(cand):].strip()
