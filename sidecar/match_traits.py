@@ -110,15 +110,23 @@ def load_atlas(atlas_dir: str, size: int | None = None) -> dict[str, np.ndarray]
 
 
 def build_neg_map(traits_json_path: str) -> dict[str, str]:
-    """Build mapping from positive base icon_name -> negative _2 icon_name."""
+    """Build mapping from positive base icon_name -> negative _2 icon_name.
+
+    Standalone negatives (no _2 suffix) map to themselves so
+    split_atlas_by_shape routes them into the red subset.
+    """
     try:
         with open(traits_json_path, encoding='utf-8') as f:
             traits = json.load(f)
         neg = {}
         for t in traits:
             iname = t.get("icon_name", "")
-            if t.get("is_negative") and iname.endswith("_2"):
+            if not t.get("is_negative"):
+                continue
+            if iname.endswith("_2"):
                 neg[iname[:-2]] = iname
+            else:
+                neg[iname] = iname
         return neg
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         return {}
@@ -564,9 +572,14 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
                 elif zone == "shield":
                     ranked = _ccoeff_rerank_shield(ranked, orig_icon, shaped.full["shield"])
                 ranked = _normalize_ranked(ranked)
-                best_name, best_score = ranked[0]
                 if color == "red":
-                    best_name = shaped.neg_map.get(best_name, best_name)
+                    seen_neg: dict[str, float] = {}
+                    for n, s in ranked:
+                        neg_n = shaped.neg_map.get(n, n)
+                        if neg_n not in seen_neg or s > seen_neg[neg_n]:
+                            seen_neg[neg_n] = s
+                    ranked = sorted(seen_neg.items(), key=lambda x: x[1], reverse=True)
+                best_name, best_score = ranked[0]
                 sr.match = TraitMatch(icon_name=best_name, confidence=best_score,
                                       bbox=(x, y, icon_img.shape[1], icon_img.shape[0]))
                 sr.ranked = ranked
@@ -602,9 +615,14 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
             elif best_shape == "shield":
                 ranked = _ccoeff_rerank_shield(ranked, orig_icon, shaped.full["shield"])
             ranked = _normalize_ranked(ranked)
-            best_name, best_score = ranked[0]
             if color == "red":
-                best_name = shaped.neg_map.get(best_name, best_name)
+                seen_neg: dict[str, float] = {}
+                for n, s in ranked:
+                    neg_n = shaped.neg_map.get(n, n)
+                    if neg_n not in seen_neg or s > seen_neg[neg_n]:
+                        seen_neg[neg_n] = s
+                ranked = sorted(seen_neg.items(), key=lambda x: x[1], reverse=True)
+            best_name, best_score = ranked[0]
             best_sr.match = TraitMatch(icon_name=best_name, confidence=best_score,
                                        bbox=(x, y, icon_img.shape[1], icon_img.shape[0]))
             best_sr.ranked = ranked
