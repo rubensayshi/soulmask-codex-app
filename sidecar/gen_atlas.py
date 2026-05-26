@@ -17,11 +17,42 @@ SHAPE_FILES = {
 }
 
 ICON_SCALE = {
-    "hexagon": 0.80,
+    "hexagon": 0.86,
     "diamond": 0.80,
-    "shield": 0.80,
+    "shield": 0.86,
     "shield_alt": 0.80,
 }
+
+# Compensate for shape files having more padding than game renders.
+# Measured: captured shield fills 94% but atlas fills 90.6%, hex 100% vs 85.9%.
+BADGE_SCALE = {
+    "hexagon": 1.01,
+    "diamond": 1.05,
+    "shield": 1.06,
+    "shield_alt": 1.06,
+}
+
+# Nudge (px) applied when center-cropping badge to final size.
+# X: positive = shift content left. Y: positive = shift content up.
+CONTENT_NUDGE_X = {
+    "shield": 1,
+    "shield_alt": 2,
+    "diamond": 1,
+}
+CONTENT_NUDGE_Y = {
+    "shield": -2,
+    "hexagon": -1,
+}
+
+# Vertical nudge for the inner icon within the badge (before crop).
+# Negative = move icon up.
+ICON_NUDGE_Y = {
+    "hexagon": -3,
+    "diamond": -3,
+    "shield": -5,
+    "shield_alt": -3,
+}
+
 
 SOURCE_TO_FOLDER = {
     "Normal": "TianFu",
@@ -44,31 +75,62 @@ def source_to_badge_shape(source: str) -> str:
     return "shield_alt"
 
 
+def _crop_to_content(img: Image.Image, threshold: int = 20) -> Image.Image:
+    """Crop RGBA image to visible content, pad to square with equal margins."""
+    import numpy as np
+    arr = np.array(img)
+    mask = arr[:, :, 3] > threshold
+    if not mask.any():
+        return img
+    ys, xs = np.where(mask)
+    x1, y1, x2, y2 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+    cropped = img.crop((x1, y1, x2, y2))
+    w, h = cropped.size
+    side = max(w, h)
+    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    square.paste(cropped, ((side - w) // 2, (side - h) // 2))
+    return square
+
+
 def composite_icon(icon_path: str, shape: str, negative: bool, size: int,
                    star: int = 0) -> Image.Image:
     shape_file = SHAPE_FILES[(shape, negative)]
     badge = Image.open(os.path.join(SHAPES_DIR, shape_file)).convert("RGBA")
-    badge = badge.resize((size, size), Image.LANCZOS)
+    badge = _crop_to_content(badge)
+    bscale = BADGE_SCALE.get(shape, 1.0)
+    badge_size = int(size * bscale)
+    badge = badge.resize((badge_size, badge_size), Image.LANCZOS)
 
     icon = Image.open(icon_path).convert("RGBA")
     scale = ICON_SCALE.get(shape, 0.85)
-    icon_size = int(size * scale)
+    icon_size = int(badge_size * scale)
     icon = icon.resize((icon_size, icon_size), Image.LANCZOS)
-    offset = (size - icon_size) // 2
-    badge.paste(icon, (offset, offset), icon)
+    offset = (badge_size - icon_size) // 2
+    iy = ICON_NUDGE_Y.get(shape, 0)
+    badge.paste(icon, (offset, offset + iy), icon)
 
     if 1 <= star <= 3:
         star_img = Image.open(os.path.join(SHAPES_DIR, f"star_{star}.png")).convert("RGBA")
         sw, sh = star_img.size
-        star_scale = size / 64.0
+        star_scale = badge_size / 64.0
         new_sw = max(int(sw * star_scale), 1)
         new_sh = max(int(sh * star_scale), 1)
         star_img = star_img.resize((new_sw, new_sh), Image.LANCZOS)
-        sx = (size - new_sw) // 2
-        sy = size - new_sh - max(int(size * 0.03), 1)
+        sx = (badge_size - new_sw) // 2
+        sy = badge_size - new_sh - max(int(badge_size * 0.03), 1)
         badge.paste(star_img, (sx, sy), star_img)
 
-    return badge
+    nx = CONTENT_NUDGE_X.get(shape, 0)
+    ny = CONTENT_NUDGE_Y.get(shape, 0)
+    bg = Image.new("RGBA", (size, size), (0, 0, 0, 255))
+    if badge_size >= size:
+        margin = (badge_size - size) // 2
+        badge = badge.crop((margin + nx, margin + ny, margin + nx + size, margin + ny + size))
+        bg.paste(badge, (0, 0), badge)
+    else:
+        pad = (size - badge_size) // 2
+        bg.paste(badge, (pad - nx, pad - ny), badge)
+    return bg.convert("RGB")
 
 
 def _find_icon(icon_name: str, source: str) -> str | None:
