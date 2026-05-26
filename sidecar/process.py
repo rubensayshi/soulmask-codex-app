@@ -6,8 +6,8 @@ import cv2
 
 def process_image(image_path: str, atlas_dir: str) -> dict:
     from detect_cards import detect_cards, crop_region
-    from ocr_text import extract_card_text
     from match_traits import load_atlas, match_trait_row, build_neg_map
+    from ocr_llm import extract_cards_llm
 
     img = cv2.imread(image_path)
     if img is None:
@@ -17,11 +17,15 @@ def process_image(image_path: str, atlas_dir: str) -> dict:
     neg_map = build_neg_map(os.path.join(os.path.dirname(atlas_dir), "traits.json"))
     cards = detect_cards(img)
 
+    card_images = [card.crop(img) for card in cards]
+    try:
+        card_texts = extract_cards_llm(card_images)
+    except Exception as e:
+        return {"error": f"LLM OCR failed: {e}", "tribesmen": [], "cards_found": len(cards)}
+
     tribesmen = []
-    for i, card in enumerate(cards):
-        card_img = card.crop(img)
+    for i, (card_img, text) in enumerate(zip(card_images, card_texts)):
         try:
-            text = extract_card_text(card_img)
             trait_row = crop_region(card_img, "trait_row")
             matches = match_trait_row(trait_row, atlas, neg_map=neg_map) if atlas else []
             traits_out = []

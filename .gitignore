@@ -4,10 +4,11 @@ dist/
 sidecar/.venv/
 __pycache__/
 *.pyc
-
+.env
 
 # Debug/temp images
 fixtures/debug-*
+debug/
 screenshots/
 
 # Build artifacts
