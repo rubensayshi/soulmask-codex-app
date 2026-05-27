@@ -1,9 +1,25 @@
 use crate::{CaptureQueue, ProcessingFlag};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::process::Command;
 use std::sync::atomic::Ordering;
 use tauri::{AppHandle, Emitter, Manager};
 use xcap::{Monitor, Window};
+
+/// Resolve the Python executable — prefer the sidecar venv, fall back to system.
+fn resolve_python(sidecar_dir: &Path) -> String {
+    let venv_python = if cfg!(windows) {
+        sidecar_dir.join(".venv").join("Scripts").join("python.exe")
+    } else {
+        sidecar_dir.join(".venv").join("bin").join("python3")
+    };
+    if venv_python.exists() {
+        venv_python.to_string_lossy().into_owned()
+    } else {
+        eprintln!("[sidecar] venv not found at {:?}, falling back to system python", venv_python);
+        if cfg!(windows) { "python".to_string() } else { "python3".to_string() }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Alternative {
@@ -70,7 +86,7 @@ pub async fn process_images(paths: Vec<String>, app: AppHandle) -> Result<Proces
     let mut total_cards = 0;
 
     for path in &paths {
-        let python = if cfg!(windows) { "python" } else { "python3" };
+        let python = resolve_python(&sidecar_dir);
         let path_exists = std::path::Path::new(path.as_str()).exists();
         eprintln!("[sidecar] running: {} {:?} {:?} --atlas {:?} (file_exists={})", python, process_py, path, atlas_dir, path_exists);
         log_to_file(&format!("[sidecar] path={} exists={}", path, path_exists));
@@ -99,6 +115,10 @@ pub async fn process_images(paths: Vec<String>, app: AppHandle) -> Result<Proces
         let stdout = String::from_utf8_lossy(&output.stdout);
         let result: ProcessResult =
             serde_json::from_str(&stdout).map_err(|e| format!("Invalid JSON from sidecar: {}", e))?;
+        if let Some(ref err) = result.error {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("Sidecar failed | {} | stderr: {:?}", err, stderr.trim()));
+        }
 
         total_cards += result.cards_found;
         all_tribesmen.extend(result.tribesmen);
@@ -374,7 +394,7 @@ async fn run_sidecar(paths: &[String], app: &AppHandle) -> Result<ProcessResult,
     let sidecar_dir = base_dir.join("sidecar");
     let process_py  = sidecar_dir.join("process.py");
 
-    let python = if cfg!(windows) { "python" } else { "python3" };
+    let python = resolve_python(&sidecar_dir);
     let n = paths.len();
     eprintln!("[sidecar] running: {} {:?} {} path(s) --atlas {:?}", python, process_py, n, atlas_dir);
 
@@ -410,7 +430,13 @@ async fn run_sidecar(paths: &[String], app: &AppHandle) -> Result<ProcessResult,
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    serde_json::from_str(&stdout).map_err(|e| format!("Invalid JSON from sidecar: {}", e))
+    let result: ProcessResult =
+        serde_json::from_str(&stdout).map_err(|e| format!("Invalid JSON from sidecar: {}", e))?;
+    if let Some(ref err) = result.error {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Sidecar failed | {} | stderr: {:?}", err, stderr.trim()));
+    }
+    Ok(result)
 }
 
 // ── Import images (user-supplied paths — no cleanup) ─────────────────────────

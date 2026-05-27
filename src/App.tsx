@@ -58,26 +58,33 @@ function App() {
 
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window)) return
+    let cancelled = false
     const unsubs: (() => void)[] = []
-    listen<string>('capture:status', (e) => {
+    const reg = <T,>(event: string, handler: (e: { payload: T }) => void) => {
+      listen<T>(event, handler).then(u => {
+        if (cancelled) u()
+        else unsubs.push(u)
+      })
+    }
+    reg<string>('capture:status', (e) => {
       store.setCaptureStatus(e.payload as CaptureStatus)
-    }).then(u => unsubs.push(u))
-    listen<ProcessResult>('capture:result', (e) => {
+    })
+    reg<ProcessResult>('capture:result', (e) => {
       store.addCaptureResult(e.payload)
-    }).then(u => unsubs.push(u))
-    listen<string>('capture:error', (e) => {
+    })
+    reg<string>('capture:error', (e) => {
       store.setCaptureError(e.payload)
-    }).then(u => unsubs.push(u))
-    listen<number>('capture:queued', (e) => {
+    })
+    reg<number>('capture:queued', (e) => {
       store.setQueueCount(e.payload)
-    }).then(u => unsubs.push(u))
-    listen<string>('capture:queued_path', (e) => {
+    })
+    reg<string>('capture:queued_path', (e) => {
       store.logQueuedPath(e.payload)
-    }).then(u => unsubs.push(u))
-    listen<string>('capture:progress', (e) => {
+    })
+    reg<string>('capture:progress', (e) => {
       store.setProgress(e.payload)
-    }).then(u => unsubs.push(u))
-    return () => unsubs.forEach(u => u())
+    })
+    return () => { cancelled = true; unsubs.forEach(u => u()) }
   }, [])
 
   const rows = useMemo(
