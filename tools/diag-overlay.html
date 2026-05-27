@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Trait diagnostic overlay</title>
+<style>
+  :root { --bg: #1a1a2e; --card: #222244; --border: #333366; --text: #e0e0e0; --muted: #888; --green: #5BC477; --teal: #327D7B; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Helvetica Neue", system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+  h1 { font-size: 20px; margin-bottom: 16px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; width: 520px;
+  }
+  .item-header { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .item-header .name { color: var(--text); font-weight: 600; }
+  .item-header .conf { color: var(--green); font-weight: 600; }
+  .alts { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .images { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .img-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .img-col img, .img-col canvas { border: 1px solid var(--border); border-radius: 4px; image-rendering: pixelated; }
+  .label { font-size: 10px; color: var(--muted); text-align: center; }
+  .slider-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .slider-row label { font-size: 11px; color: var(--muted); width: 50px; }
+  .slider-row input[type=range] { flex: 1; }
+  .slider-row .val { font-size: 11px; color: var(--green); width: 30px; }
+</style>
+</head>
+<body>
+<h1>Trait diagnostic overlay</h1>
+<p style="color:var(--muted);font-size:13px;margin-bottom:16px">Captured icon vs atlas reference. Cyan tint = atlas overlay. Use opacity slider to scrub.</p>
+<div class="grid" id="root"></div>
+<script>
+const ZOOM = 2;
+
+fetch('./diag-data.json').then(r => r.json()).then(data => {
+  const root = document.getElementById('root');
+  data.forEach((d, idx) => {
+    const sz = Math.max(d.crop_w, d.crop_h);
+    const cvW = sz * ZOOM, cvH = sz * ZOOM;
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `
+      <div class="item-header">
+        Card ${d.card} / Trait ${d.trait} —
+        <span class="name">${d.icon_name}</span>
+        <span class="conf">${Math.round(d.confidence * 100)}%</span>
+      </div>
+      <div class="alts">${d.alts.map(a => a[0].split('_').pop() + ' ' + Math.round(a[1]*100) + '%').join(' · ')}</div>
+      <div class="images">
+        <div class="img-col">
+          <img src="data:image/png;base64,${d.crop_b64}" width="${d.crop_w * 2}" height="${d.crop_h * 2}">
+          <span class="label">captured</span>
+        </div>
+        <div class="img-col">
+          ${d.ref_b64 ? `<img src="data:image/png;base64,${d.ref_b64}" width="${d.crop_w * 2}" height="${d.crop_h * 2}">` : '<span class="label">no ref</span>'}
+          <span class="label">atlas</span>
+        </div>
+        <div class="img-col">
+          <canvas id="cv-${idx}" width="${cvW}" height="${cvH}" style="width:${cvW}px;height:${cvH}px"></canvas>
+          <span class="label">overlay</span>
+        </div>
+      </div>
+      <div class="slider-row">
+        <label>opacity</label>
+        <input type="range" min="0" max="100" value="50" oninput="draw(${idx}, this.value)">
+        <span class="val" id="val-${idx}">50%</span>
+      </div>
+    `;
+    root.appendChild(el);
+
+    const cap = new Image(); cap.src = 'data:image/png;base64,' + d.crop_b64;
+    const ref = d.ref_b64 ? new Image() : null;
+    if (ref) ref.src = 'data:image/png;base64,' + d.ref_b64;
+
+    window['_d_' + idx] = { cap, ref, w: cvW, h: cvH };
+    cap.onload = () => draw(idx, 50);
+    if (ref) ref.onload = () => draw(idx, 50);
+  });
+
+  window.draw = function(idx, val) {
+    const d = window['_d_' + idx];
+    const cv = document.getElementById('cv-' + idx);
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, d.w, d.h);
+
+    ctx.globalAlpha = 1;
+    ctx.drawImage(d.cap, 0, 0, d.w, d.h);
+
+    if (d.ref && d.ref.complete) {
+      // Tint atlas cyan on offscreen canvas
+      const off = document.createElement('canvas');
+      off.width = d.w; off.height = d.h;
+      const oc = off.getContext('2d');
+      oc.imageSmoothingEnabled = false;
+      oc.drawImage(d.ref, 0, 0, d.w, d.h);
+      oc.globalCompositeOperation = 'source-atop';
+      oc.fillStyle = 'rgba(0, 200, 255, 0.4)';
+      oc.fillRect(0, 0, d.w, d.h);
+
+      ctx.globalAlpha = val / 100;
+      ctx.drawImage(off, 0, 0);
+    }
+    document.getElementById('val-' + idx).textContent = val + '%';
+  };
+});
+</script>
+</body>
+</html>

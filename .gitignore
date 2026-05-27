@@ -11,6 +11,10 @@ fixtures/debug-*
 debug/
 screenshots/
 
+# Generated tool data (regenerate with scripts)
+tools/*-data.json
+tools/review-data.json
+
 # Build artifacts
 src-tauri/target/
 src-tauri/gen/
