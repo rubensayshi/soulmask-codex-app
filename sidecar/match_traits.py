@@ -141,6 +141,9 @@ class ShapedAtlas:
     neg_map: dict[str, str] = field(default_factory=dict)
 
 
+CROP_MARGIN = {"hexagon": 0.20, "diamond": 0.20, "shield": 0.20}
+
+
 def split_atlas_by_shape(atlas: dict[str, np.ndarray], neg_map: dict[str, str] | None = None) -> ShapedAtlas:
     full: dict[str, dict[str, np.ndarray]] = {"hexagon": {}, "diamond": {}, "shield": {}}
     cropped: dict[str, dict[str, np.ndarray]] = {"hexagon": {}, "diamond": {}, "shield": {}}
@@ -149,14 +152,14 @@ def split_atlas_by_shape(atlas: dict[str, np.ndarray], neg_map: dict[str, str] |
     neg_names = set(neg_map.values()) if neg_map else set()
     for name, img in atlas.items():
         base = _STAR_SUFFIX.sub('', name)
-        if base in neg_names:
-            shape = _icon_shape(base)
-            red[shape][name] = img
-            red_cropped[shape][name] = _crop_interior(img)
-            continue
         shape = _icon_shape(base)
+        margin = CROP_MARGIN.get(shape, 0.20)
+        if base in neg_names:
+            red[shape][name] = img
+            red_cropped[shape][name] = _crop_interior(img, margin)
+            continue
         full[shape][name] = img
-        cropped[shape][name] = _crop_interior(img)
+        cropped[shape][name] = _crop_interior(img, margin)
     return ShapedAtlas(full=full, cropped=cropped, red=red, red_cropped=red_cropped, neg_map=neg_map or {})
 
 
@@ -571,15 +574,16 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
         orig_icon = icon_img
 
         if zone != "unknown":
+            margin = CROP_MARGIN.get(zone, 0.20)
             if color == "red" and shaped.red_cropped.get(zone):
                 subset = shaped.red_cropped[zone]
-                icon_img = _crop_interior(icon_img)
+                icon_img = _crop_interior(icon_img, margin)
             elif zone == "hexagon" and color in ("green", "purple", "gold"):
                 subset = shaped.cropped[zone]
-                icon_img = _crop_interior(icon_img)
+                icon_img = _crop_interior(icon_img, margin)
             else:
                 subset = shaped.cropped[zone]
-                icon_img = _crop_interior(icon_img)
+                icon_img = _crop_interior(icon_img, margin)
             threshold = thresholds[zone]
             sr = _match_icon_scored(icon_img, subset)
             if sr and sr.match.confidence >= threshold:
@@ -605,12 +609,13 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
                 candidates.append(_Candidate(match=sr.match, ranked=sr.ranked, threshold=threshold))
             continue
 
-        icon_crop = _crop_interior(icon_img)
         best_sr: _SubsetResult | None = None
         best_z = -1.0
         best_threshold = 0.0
         best_shape = "hexagon"
         for shape_key, threshold in thresholds.items():
+            margin = CROP_MARGIN.get(shape_key, 0.20)
+            icon_crop = _crop_interior(icon_img, margin)
             if color == "red" and shaped.red_cropped.get(shape_key):
                 subset = shaped.red_cropped[shape_key]
                 match_img = icon_crop
@@ -647,4 +652,8 @@ def match_trait_row(trait_row: np.ndarray, atlas: dict[str, np.ndarray],
             best_sr.ranked = ranked
             candidates.append(_Candidate(match=best_sr.match, ranked=best_sr.ranked, threshold=best_threshold))
 
-    return _dedup_matches(candidates)
+    result: list[TraitMatch] = []
+    for c in candidates:
+        c.match.alternatives = _top_alts(c.ranked, c.match.icon_name, c.threshold, {})
+        result.append(c.match)
+    return result
