@@ -22,6 +22,7 @@ export interface TraitMatch {
   tier?: Tier | null
   tier_tags?: string[]
   tier_note?: string
+  ambiguous?: boolean
 }
 
 export interface Group {

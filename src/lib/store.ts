@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Tribesman, ProcessResult, TraitMatch, ClanName, StatusType, Alternative } from './types'
-import { getBestTrait, getTierForIcon, getTierForName } from './traits'
+import { getBestTrait, getTraitById, getTraitCandidates, getTierForIcon, getTierForName } from './traits'
 import { normalizeTitle, normalizeClass, normalizeGroup, deduplicateGroups } from './fuzzy'
 
 // ── Sidecar output shape (class instead of klass, group/status as strings, no id/prof) ──
@@ -44,20 +44,31 @@ function normalizeTribesman(raw: RawTribesman, capturedAt: string): Tribesman {
     if (seen.has(t.icon_name)) continue
     seen.add(t.icon_name)
     const info = getBestTrait(t.icon_name)
+    const candidates = getTraitCandidates(t.icon_name)
+    const ambiguous = candidates.length > 1
     const tierInfo = getTierForIcon(t.icon_name) ?? (info?.name ? getTierForName(info.name) : null)
+    let displayName: string
+    if (!ambiguous) {
+      displayName = info?.name ?? info?.name_zh ?? t.icon_name
+    } else if (info?.shape === 'shield' && info?.clan) {
+      displayName = `${info.clan.charAt(0).toUpperCase() + info.clan.slice(1)} Tribe trait`
+    } else {
+      displayName = info?.name ?? info?.name_zh ?? t.icon_name
+    }
     allTraits.push({
       icon_name: t.icon_name,
       confidence: t.confidence,
       alternatives: t.alternatives,
       crop_b64: t.crop_b64,
       id: info?.id ?? t.icon_name,
-      name: info?.name ?? info?.name_zh ?? t.icon_name,
+      name: displayName,
       shape: info?.shape ?? 'hexagon',
       eff: info?.description ?? '',
       star: info?.star ?? 1,
       tier: tierInfo?.tier ?? null,
       tier_tags: tierInfo?.tags,
       tier_note: tierInfo?.note,
+      ambiguous,
     })
   }
   const MAX_HEXAGON = 6
@@ -244,7 +255,24 @@ export const useRosterStore = create<RosterState>((set) => ({
       const newReviews: ReviewItem[] = []
       for (const t of incoming) {
         t.traits.forEach((trait, idx) => {
-          if (trait.confidence < REVIEW_THRESHOLD && trait.alternatives?.length) {
+          if (trait.ambiguous) {
+            const candidates = getTraitCandidates(trait.icon_name)
+            const options = candidates.map(c => ({
+              id: c.id,
+              name: `${c.name ?? c.name_zh}${c.star > 1 ? ` ★${c.star}` : ''}`,
+              pct: Math.round(trait.confidence * 100),
+            }))
+            newReviews.push({
+              id: `${t.id}__trait__${idx}`,
+              tribesmanId: t.id,
+              tribesmanName: t.name,
+              traitIndex: idx,
+              cropLabel: `AMBIGUOUS · ${trait.name}`,
+              cropData: trait.crop_b64 ? `data:image/png;base64,${trait.crop_b64}` : undefined,
+              field: 'trait',
+              options,
+            })
+          } else if (trait.confidence < REVIEW_THRESHOLD && trait.alternatives?.length) {
             const options = [
               { id: trait.icon_name, name: trait.name, pct: Math.round(trait.confidence * 100) },
               ...trait.alternatives.map(alt => {
@@ -295,14 +323,38 @@ export const useRosterStore = create<RosterState>((set) => ({
   commitReview: (picks) => set((state) => {
     const tribesmen = [...state.tribesmen]
     const committed = new Set<string>()
-    for (const [reviewId, chosenIconName] of Object.entries(picks)) {
+    for (const [reviewId, chosenValue] of Object.entries(picks)) {
       const item = state.reviewQueue.find(r => r.id === reviewId)
       if (!item) continue
       const tIdx = tribesmen.findIndex(t => t.id === item.tribesmanId)
       if (tIdx < 0) continue
       const t = { ...tribesmen[tIdx], traits: [...tribesmen[tIdx].traits] }
       const trait = t.traits[item.traitIndex]
-      if (!trait || trait.icon_name === chosenIconName) {
+      if (!trait) { committed.add(reviewId); continue }
+
+      const byId = getTraitById(chosenValue)
+      if (byId) {
+        const tierInfo = getTierForIcon(byId.icon_name) ?? (byId.name ? getTierForName(byId.name) : null)
+        t.traits[item.traitIndex] = {
+          ...trait,
+          icon_name: byId.icon_name,
+          id: byId.id,
+          name: byId.name ?? byId.name_zh ?? byId.icon_name,
+          shape: byId.shape ?? trait.shape,
+          eff: byId.description ?? '',
+          star: byId.star,
+          tier: tierInfo?.tier ?? null,
+          tier_tags: tierInfo?.tags,
+          tier_note: tierInfo?.note,
+          ambiguous: false,
+        }
+        tribesmen[tIdx] = t
+        committed.add(reviewId)
+        continue
+      }
+
+      const chosenIconName = chosenValue
+      if (trait.icon_name === chosenIconName) {
         committed.add(reviewId)
         continue
       }

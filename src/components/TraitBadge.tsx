@@ -78,7 +78,7 @@ export function TraitBadge({ trait, size = 24, withPips = true }: Props) {
             onError={() => setImgErr(true)}
           />
         )}
-        {tc && (
+        {tc && !trait.ambiguous && (
           <span
             className="absolute flex items-center justify-center"
             style={{
@@ -95,6 +95,25 @@ export function TraitBadge({ trait, size = 24, withPips = true }: Props) {
             }}
           >
             {tier}
+          </span>
+        )}
+        {trait.ambiguous && (
+          <span
+            className="absolute flex items-center justify-center"
+            style={{
+              top: -3, right: -4,
+              width: 11, height: 11,
+              borderRadius: '50%',
+              background: 'oklch(0.50 0.15 60)',
+              color: '#fff',
+              fontSize: 8,
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 700,
+              lineHeight: 1,
+              border: '1px solid oklch(0.16 0.006 130)',
+            }}
+          >
+            ?
           </span>
         )}
       </span>

@@ -9,28 +9,15 @@ interface Props {
 export function ReviewScreen({ onDone }: Props) {
   const reviewItems = useRosterStore(s => s.reviewQueue)
   const commitReview = useRosterStore(s => s.commitReview)
-  const clearReview = useRosterStore(s => s.clearReview)
 
   const [picks, setPicks] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {}
     reviewItems.forEach(it => { m[it.id] = it.options[0]?.id ?? '' })
     return m
   })
-  const [fixed, setFixed] = useState<Record<string, boolean>>({})
 
-  function setPick(itemId: string, choice: string) {
-    setPicks(p => ({ ...p, [itemId]: choice }))
-    setFixed(f => ({ ...f, [itemId]: true }))
-  }
-
-  function handleCommit() {
-    commitReview(picks)
-    onDone()
-  }
-
-  function handleSkip() {
-    clearReview()
-    onDone()
+  function confirmItem(itemId: string) {
+    commitReview({ [itemId]: picks[itemId] })
   }
 
   if (reviewItems.length === 0) {
@@ -48,10 +35,6 @@ export function ReviewScreen({ onDone }: Props) {
     )
   }
 
-  const remaining = reviewItems.filter(it => !fixed[it.id]).length
-  const reviewed = reviewItems.length - remaining
-  const pct = reviewItems.length > 0 ? (reviewed / reviewItems.length * 100) : 0
-
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -68,135 +51,116 @@ export function ReviewScreen({ onDone }: Props) {
             fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-gold)',
             letterSpacing: '0.18em', textTransform: 'uppercase',
           }}>
-            ◆ Confidence below 80%
+            ◆ Items need review
           </span>
         </div>
         <h2 style={{ margin: '0 0 4px', fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600 }}>
-          Review <em style={{ fontStyle: 'italic', color: 'var(--color-accent)', fontWeight: 500 }}>{reviewItems.length} items</em>
+          Review <em style={{ fontStyle: 'italic', color: 'var(--color-accent)', fontWeight: 500 }}>{reviewItems.length} remaining</em>
         </h2>
         <div style={{ color: 'var(--color-text-dim)', fontSize: 13, marginBottom: 14 }}>
-          Verify the codex's best guesses, or pick a different match. Unreviewed items will use the highest-confidence option.
+          Pick the correct trait for ambiguous icons, or verify low-confidence matches. Confirm each individually.
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="rounded-full overflow-hidden" style={{ flex: 1, maxWidth: 400, height: 4, background: 'var(--color-border-soft)' }}>
-            <div
-              className="h-full rounded-full"
-              style={{ width: pct + '%', background: 'var(--color-accent)', boxShadow: '0 0 8px var(--color-accent-glow)', transition: 'width 0.2s' }}
-            />
-          </div>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--color-muted)', letterSpacing: '0.06em' }}>
-            {reviewed} / {reviewItems.length} REVIEWED
-          </span>
           <span className="flex-1" />
-          <button className="btn-outline" onClick={handleSkip}>Skip remaining</button>
-          <button className="btn-primary" onClick={handleCommit}>
-            <IcoCheck size={12} /> Commit roster
-          </button>
+          <button className="btn-outline" onClick={onDone}>Done</button>
         </div>
       </div>
 
       {/* Items */}
       <div className="flex-1 overflow-auto content-scroll" style={{ padding: '0 28px' }}>
-        {reviewItems.map(item => {
-          const isFixed = fixed[item.id]
-          return (
-            <div
-              key={item.id}
-              className="grid items-center"
-              style={{
-                gridTemplateColumns: '160px 1fr auto',
-                gap: 20,
-                padding: '16px 0',
-                borderBottom: '1px solid var(--color-border-soft)',
-                opacity: isFixed ? 0.7 : 1,
-                transition: 'opacity 0.2s',
-              }}
-            >
-              {/* Cropped icon */}
-              <div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted)', letterSpacing: '0.08em', marginBottom: 4 }}>
-                  ◆ {item.cropLabel}
-                </div>
-                {item.cropData ? (
-                  <img
-                    src={item.cropData}
-                    alt={item.cropLabel}
-                    className="rounded"
-                    style={{
-                      height: 48,
-                      objectFit: 'contain',
-                      border: '1px solid var(--color-border)',
-                      background: 'oklch(0.16 0.008 130)',
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="grid place-items-center rounded"
-                    style={{
-                      height: 48,
-                      background: 'repeating-linear-gradient(45deg, oklch(0.20 0.012 130) 0 6px, oklch(0.16 0.008 130) 6px 12px)',
-                      border: '1px solid var(--color-border)',
-                      fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted)', letterSpacing: '0.06em',
-                    }}
-                  >
-                    NO CROP
-                  </div>
-                )}
+        {reviewItems.map(item => (
+          <div
+            key={item.id}
+            className="grid items-center"
+            style={{
+              gridTemplateColumns: '160px 1fr auto',
+              gap: 20,
+              padding: '16px 0',
+              borderBottom: '1px solid var(--color-border-soft)',
+            }}
+          >
+            {/* Cropped icon */}
+            <div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted)', letterSpacing: '0.08em', marginBottom: 4 }}>
+                ◆ {item.cropLabel}
               </div>
-
-              {/* Tribesman + options */}
-              <div>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span style={{ fontFamily: 'var(--font-serif)', fontSize: 16 }}>{item.tribesmanName}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    · {item.field}
-                  </span>
+              {item.cropData ? (
+                <img
+                  src={item.cropData}
+                  alt={item.cropLabel}
+                  className="rounded"
+                  style={{
+                    height: 48,
+                    objectFit: 'contain',
+                    border: '1px solid var(--color-border)',
+                    background: 'oklch(0.16 0.008 130)',
+                  }}
+                />
+              ) : (
+                <div
+                  className="grid place-items-center rounded"
+                  style={{
+                    height: 48,
+                    background: 'repeating-linear-gradient(45deg, oklch(0.20 0.012 130) 0 6px, oklch(0.16 0.008 130) 6px 12px)',
+                    border: '1px solid var(--color-border)',
+                    fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--color-muted)', letterSpacing: '0.06em',
+                  }}
+                >
+                  NO CROP
                 </div>
-                <div className="flex gap-1.5 flex-wrap">
-                  {item.options.map(o => {
-                    const sel = picks[item.id] === o.id
-                    return (
-                      <button
-                        key={o.id}
-                        className="rounded transition-all"
-                        style={{
-                          padding: '5px 12px',
-                          fontSize: 12,
-                          border: `1px solid ${sel ? 'var(--color-accent-soft)' : 'var(--color-border-soft)'}`,
-                          background: sel ? 'var(--color-accent-glow)' : 'transparent',
-                          color: sel ? 'var(--color-accent)' : 'var(--color-text-dim)',
-                        }}
-                        onClick={() => setPick(item.id, o.id)}
-                      >
-                        {o.name}{' '}
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: sel ? 'var(--color-accent)' : 'var(--color-muted)' }}>
+              )}
+            </div>
+
+            {/* Tribesman + options */}
+            <div>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: 16 }}>{item.tribesmanName}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  · {item.field}
+                </span>
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                {item.options.map(o => {
+                  const sel = picks[item.id] === o.id
+                  const isAmbiguous = item.cropLabel.startsWith('AMBIGUOUS')
+                  return (
+                    <button
+                      key={o.id}
+                      className="rounded transition-all"
+                      style={{
+                        padding: '5px 12px',
+                        fontSize: 12,
+                        border: `1px solid ${sel ? 'var(--color-accent-soft)' : 'var(--color-border-soft)'}`,
+                        background: sel ? 'var(--color-accent-glow)' : 'transparent',
+                        color: sel ? 'var(--color-accent)' : 'var(--color-text-dim)',
+                      }}
+                      onClick={() => setPicks(p => ({ ...p, [item.id]: o.id }))}
+                    >
+                      {o.name}
+                      {!isAmbiguous && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: sel ? 'var(--color-accent)' : 'var(--color-muted)', marginLeft: 4 }}>
                           {o.pct}%
                         </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Status */}
-              <div style={{ textAlign: 'right' }}>
-                {isFixed ? (
-                  <span
-                    className="inline-flex items-center gap-1.5"
-                    style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-accent)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
-                  >
-                    <IcoCheck size={12} /> Confirmed
-                  </span>
-                ) : (
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-gold)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    ◆ Awaiting
-                  </span>
-                )}
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </div>
-          )
-        })}
+
+            {/* Confirm button */}
+            <div style={{ textAlign: 'right' }}>
+              <button
+                className="btn-primary"
+                style={{ padding: '4px 12px', fontSize: 11 }}
+                onClick={() => confirmItem(item.id)}
+              >
+                <IcoCheck size={11} /> Confirm
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

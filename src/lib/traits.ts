@@ -22,6 +22,30 @@ export function getBestTrait(iconName: string): TraitInfo | null {
   return traits.reduce((a, b) => (b.star > a.star ? b : a))
 }
 
+const byId = new Map<string, TraitInfo>()
+for (const t of traitsArray) {
+  byId.set(t.id, t)
+}
+
+export function getTraitById(id: string): TraitInfo | null {
+  return byId.get(id) ?? null
+}
+
+export function getTraitCandidates(iconName: string): TraitInfo[] {
+  const all = getTraitsByIconName(iconName)
+  if (all.length <= 3) return []
+  const byName = new Map<string, TraitInfo>()
+  for (const t of all) {
+    const name = t.name ?? t.name_zh
+    const existing = byName.get(name)
+    if (!existing || t.star > existing.star) {
+      byName.set(name, t)
+    }
+  }
+  if (byName.size <= 1) return []
+  return [...byName.values()]
+}
+
 export { traitsArray }
 
 export const clanExclusiveIds: Map<string, string> = new Map()
