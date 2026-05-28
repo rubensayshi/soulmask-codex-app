@@ -33,6 +33,8 @@ pub struct TraitMatch {
     pub confidence: f64,
     #[serde(default)]
     pub alternatives: Vec<Alternative>,
+    #[serde(default)]
+    pub crop_b64: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

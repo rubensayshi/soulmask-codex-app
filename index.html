@@ -7,6 +7,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Prevent Escape from closing the Tauri window
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') e.preventDefault();
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

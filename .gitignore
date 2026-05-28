@@ -8,7 +8,8 @@ __pycache__/
 
 # Debug/temp images
 fixtures/debug-*
-debug/
+debug/*
+!debug/captures/
 screenshots/
 
 # Generated tool data (regenerate with scripts)
